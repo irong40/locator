@@ -200,10 +200,20 @@ export default function DataMigration() {
     });
   };
 
+  const hasExistingMappings = (table: TableName) => {
+    return storedMappings.some(m => m.source_table === table);
+  };
+
   const importTable = async (table: TableName) => {
     const file = files[table];
     if (!file) {
       toast.error(`No file selected for ${table}`);
+      return;
+    }
+
+    // Check if table already has mappings
+    if (hasExistingMappings(table)) {
+      toast.error(`Table "${table}" already has stored mappings. Clear mappings first to re-import.`);
       return;
     }
 
@@ -233,6 +243,12 @@ export default function DataMigration() {
         return;
       }
 
+      // Check if backend returned an alreadyImported error
+      if (response.data?.alreadyImported) {
+        toast.error(response.data.error);
+        return;
+      }
+
       const result = response.data as ImportResult;
       setResults(prev => ({ ...prev, [table]: result }));
 
@@ -254,7 +270,8 @@ export default function DataMigration() {
 
   const importPhase = async (phase: MigrationPhase) => {
     for (const table of phase.tables) {
-      if (files[table]) {
+      // Skip tables that already have mappings
+      if (files[table] && !hasExistingMappings(table)) {
         await importTable(table);
       }
     }
@@ -418,10 +435,14 @@ export default function DataMigration() {
                       <Button
                         size="sm"
                         onClick={() => importTable(table)}
-                        disabled={!files[table] || importing !== null}
+                        disabled={!files[table] || importing !== null || hasExistingMappings(table)}
+                        title={hasExistingMappings(table) ? 'Clear mappings first to re-import' : undefined}
                       >
                         Import
                       </Button>
+                      {hasExistingMappings(table) && (
+                        <p className="text-xs text-amber-600 ml-2">⚠️ Clear mappings to re-import</p>
+                      )}
                     </div>
                   </div>
                 ))}

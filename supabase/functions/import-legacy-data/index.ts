@@ -116,6 +116,27 @@ serve(async (req) => {
     
     console.log(`Importing ${data.length} records into ${table}`);
 
+    // Check if this table already has mappings (prevent re-import)
+    const tablesWithMappings = ['engine_brands', 'oem_brands', 'products', 'payment_types', 'vendors', 'users'];
+    if (tablesWithMappings.includes(table)) {
+      const { count: existingCount } = await supabase
+        .from('migration_mappings')
+        .select('id', { count: 'exact', head: true })
+        .eq('source_table', table);
+
+      if (existingCount && existingCount > 0) {
+        console.log(`Table ${table} already has ${existingCount} mappings. Blocking re-import.`);
+        return new Response(JSON.stringify({ 
+          error: `Table '${table}' already has ${existingCount} mappings stored. Clear mappings first to re-import.`,
+          alreadyImported: true,
+          existingCount
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Load existing mappings from database for imports that need them
     const storedMappings = await loadAllMappings(supabase);
 
