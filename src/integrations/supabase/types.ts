@@ -86,6 +86,92 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          old_laravel_id: number | null
+          phone_no: string | null
+          short_name: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          old_laravel_id?: number | null
+          phone_no?: string | null
+          short_name?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          old_laravel_id?: number | null
+          phone_no?: string | null
+          short_name?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_role_assignments: {
+        Row: {
+          created_at: string | null
+          id: string
+          role_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_role_assignments_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "user_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          role_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          role_name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          role_name?: string
+        }
+        Relationships: []
+      }
       vendor_engine_brands: {
         Row: {
           created_at: string | null
@@ -239,6 +325,7 @@ export type Database = {
           city: string | null
           comments: string | null
           created_at: string | null
+          created_by: string | null
           email_address: string | null
           epp: boolean | null
           fax_no: string | null
@@ -253,6 +340,7 @@ export type Database = {
           preference: string | null
           state: string | null
           updated_at: string | null
+          updated_by: string | null
           vendor_level: string | null
           vendor_name: string
           zip_code: string | null
@@ -262,6 +350,7 @@ export type Database = {
           city?: string | null
           comments?: string | null
           created_at?: string | null
+          created_by?: string | null
           email_address?: string | null
           epp?: boolean | null
           fax_no?: string | null
@@ -276,6 +365,7 @@ export type Database = {
           preference?: string | null
           state?: string | null
           updated_at?: string | null
+          updated_by?: string | null
           vendor_level?: string | null
           vendor_name: string
           zip_code?: string | null
@@ -285,6 +375,7 @@ export type Database = {
           city?: string | null
           comments?: string | null
           created_at?: string | null
+          created_by?: string | null
           email_address?: string | null
           epp?: boolean | null
           fax_no?: string | null
@@ -299,6 +390,7 @@ export type Database = {
           preference?: string | null
           state?: string | null
           updated_at?: string | null
+          updated_by?: string | null
           vendor_level?: string | null
           vendor_name?: string
           zip_code?: string | null
@@ -342,10 +434,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_full_name: { Args: { _user_id: string }; Returns: string }
+      get_user_role: { Args: { _user_id: string }; Returns: string }
+      has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "manager" | "user" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -472,6 +566,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "manager", "user", "viewer"],
+    },
   },
 } as const

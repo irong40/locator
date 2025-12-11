@@ -2,9 +2,20 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateDistance } from '@/lib/geo';
-import type { Vendor } from '@/lib/types';
+import type { Vendor, VendorId } from '@/lib/types';
 
 export type VendorWithDistance = Vendor & { distance: number };
+
+// Helper to convert database row to Vendor type
+function toVendor(row: Record<string, unknown>): Vendor {
+  return {
+    ...row,
+    id: row.id as VendorId,
+    payment_type_id: row.payment_type_id as Vendor['payment_type_id'],
+    vendor_level: row.vendor_level as Vendor['vendor_level'],
+    preference: row.preference as Vendor['preference'],
+  } as Vendor;
+}
 
 type SearchParams = {
   zipCode: string;
@@ -49,17 +60,20 @@ export function useVendorSearch() {
       const radiusMiles = searchParams?.radius ?? 50;
 
       const vendorsWithDistance: VendorWithDistance[] = data
-        .map((vendor) => ({
-          ...vendor,
-          distance: calculateDistance(
-            centerLat,
-            centerLng,
-            Number(vendor.latitude),
-            Number(vendor.longitude)
-          ),
-        }))
+        .map((row) => {
+          const vendor = toVendor(row);
+          return {
+            ...vendor,
+            distance: calculateDistance(
+              centerLat,
+              centerLng,
+              Number(row.latitude),
+              Number(row.longitude)
+            ),
+          };
+        })
         .filter((v) => v.distance <= radiusMiles)
-        .sort((a, b) => a.distance - b.distance) as VendorWithDistance[];
+        .sort((a, b) => a.distance - b.distance);
 
       return vendorsWithDistance;
     },
