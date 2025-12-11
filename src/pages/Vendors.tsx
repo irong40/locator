@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 type OemEppFilter = 'all' | 'oem' | 'epp' | 'both' | 'none';
+type ReviewFilter = 'all' | 'needs-review';
 
 export default function Vendors() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export default function Vendors() {
   const [preferenceFilter, setPreferenceFilter] = useState<string>('all');
   const [vendorLevelFilter, setVendorLevelFilter] = useState<string>('all');
   const [oemEppFilter, setOemEppFilter] = useState<OemEppFilter>('all');
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
 
   // Inline editing state
   const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
@@ -117,18 +119,22 @@ export default function Vendors() {
         }
       })();
 
-      return matchesSearch && matchesPreference && matchesLevel && matchesOemEpp;
+      const matchesReview = reviewFilter === 'all' || 
+        (reviewFilter === 'needs-review' && vendor.vendor_name === 'UNKNOWN - Needs Review');
+
+      return matchesSearch && matchesPreference && matchesLevel && matchesOemEpp && matchesReview;
     });
-  }, [vendors, searchTerm, preferenceFilter, vendorLevelFilter, oemEppFilter]);
+  }, [vendors, searchTerm, preferenceFilter, vendorLevelFilter, oemEppFilter, reviewFilter]);
 
   const clearFilters = () => {
     setSearchTerm('');
     setPreferenceFilter('all');
     setVendorLevelFilter('all');
     setOemEppFilter('all');
+    setReviewFilter('all');
   };
 
-  const hasActiveFilters = searchTerm || preferenceFilter !== 'all' || vendorLevelFilter !== 'all' || oemEppFilter !== 'all';
+  const hasActiveFilters = searchTerm || preferenceFilter !== 'all' || vendorLevelFilter !== 'all' || oemEppFilter !== 'all' || reviewFilter !== 'all';
 
   const needsReviewCount = vendors?.filter(v => v.vendor_name === 'UNKNOWN - Needs Review').length ?? 0;
 
@@ -146,13 +152,23 @@ export default function Vendors() {
       </div>
 
       {needsReviewCount > 0 && (
-        <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 flex items-center gap-2">
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 border-yellow-300">
-            {needsReviewCount} vendor{needsReviewCount > 1 ? 's' : ''} need review
-          </Badge>
-          <span className="text-sm text-yellow-700 dark:text-yellow-300">
-            Click the pencil icon to edit vendor names
-          </span>
+        <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 border-yellow-300">
+              {needsReviewCount} vendor{needsReviewCount > 1 ? 's' : ''} need review
+            </Badge>
+            <span className="text-sm text-yellow-700 dark:text-yellow-300">
+              Click the pencil icon to edit vendor names
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-yellow-300"
+            onClick={() => setReviewFilter(reviewFilter === 'needs-review' ? 'all' : 'needs-review')}
+          >
+            {reviewFilter === 'needs-review' ? 'Show All' : 'Show Only'}
+          </Button>
         </div>
       )}
 
