@@ -16,7 +16,7 @@ import logoIcon from '@/assets/logo-icon.jpeg';
 import { Badge } from '@/components/ui/badge';
 
 const mainMenuItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard, managerAndAbove: true },
   { title: 'Find Vendors', url: '/vendor-search', icon: MapPin },
   { title: 'Vendors', url: '/vendors', icon: Building2 },
 ];
@@ -62,18 +62,20 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-sidebar-foreground/70">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    onClick={() => navigate(item.url)}
-                    isActive={location.pathname === item.url || location.pathname.startsWith(item.url + '/')}
-                    className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground"
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {mainMenuItems
+                .filter((item) => !item.managerAndAbove || isAdmin || isManager)
+                .map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      onClick={() => navigate(item.url)}
+                      isActive={location.pathname === item.url || location.pathname.startsWith(item.url + '/')}
+                      className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground"
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

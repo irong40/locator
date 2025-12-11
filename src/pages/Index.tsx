@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +33,7 @@ type RegisterErrors = { firstName?: string; lastName?: string; email?: string; p
 const Index = () => {
   const navigate = useNavigate();
   const { user, loading, signIn, signUp } = useAuth();
+  const { role, isAdmin, isManager, isLoading: roleLoading } = useUserRole();
   const { toast } = useToast();
   
   // Login state
@@ -50,10 +52,12 @@ const Index = () => {
   const [registerErrors, setRegisterErrors] = useState<RegisterErrors>({});
 
   useEffect(() => {
-    if (!loading && user) {
-      navigate('/dashboard');
+    if (!loading && !roleLoading && user) {
+      // Admin and Manager go to dashboard, others go to vendor search
+      const destination = (isAdmin || isManager) ? '/dashboard' : '/vendor-search';
+      navigate(destination);
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, roleLoading, isAdmin, isManager, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +85,7 @@ const Index = () => {
           variant: 'destructive',
         });
       } else {
-        navigate('/dashboard');
+        // Let useEffect handle navigation based on role
       }
     } finally {
       setLoginLoading(false);
