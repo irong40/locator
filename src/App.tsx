@@ -8,6 +8,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import Index from './pages/Index';
 import Dashboard from './pages/Dashboard';
 import Vendors from './pages/Vendors';
+import VendorDetail from './pages/VendorDetail';
 import VendorSearch from './pages/VendorSearch';
 import NotFound from './pages/NotFound';
 
@@ -63,7 +64,7 @@ function AppRoutes() {
         path="/vendors/:id"
         element={
           <ProtectedRoute>
-            <Vendors />
+            <VendorDetail />
           </ProtectedRoute>
         }
       />
