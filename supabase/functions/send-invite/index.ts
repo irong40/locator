@@ -109,9 +109,12 @@ const handler = async (req: Request): Promise<Response> => {
     const inviteLink = resetData.properties.action_link;
     console.log(`Generated invite link for ${email}`);
 
-    // Send invitation email
+    // Send invitation email using configured from address
+    const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "C&R Repair <onboarding@resend.dev>";
+    console.log(`Sending invite email from: ${fromEmail} to: ${email}`);
+    
     const emailResponse = await resend.emails.send({
-      from: "C&R Repair <onboarding@resend.dev>",
+      from: fromEmail,
       to: [email],
       subject: "You've been invited to C&R Repair Vendor Management",
       html: `
@@ -141,7 +144,13 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    // Check for email sending errors
+    if (emailResponse.error) {
+      console.error("Resend email error:", emailResponse.error);
+      throw new Error(`Failed to send invitation email: ${emailResponse.error.message}`);
+    }
+
+    console.log("Email sent successfully:", emailResponse.data);
 
     return new Response(
       JSON.stringify({ success: true, userId: newUser.user.id }),
