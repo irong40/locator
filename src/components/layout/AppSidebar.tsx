@@ -1,5 +1,6 @@
-import { Building2, Factory, Package, CreditCard, LayoutDashboard, Wrench, MapPin, Settings, Users } from 'lucide-react';
+import { Building2, Factory, Package, CreditCard, LayoutDashboard, Wrench, MapPin, Settings, Users, History } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useUserRole } from '@/hooks/useUserRole';
 import {
   Sidebar,
   SidebarContent,
@@ -12,7 +13,6 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import logoIcon from '@/assets/logo-icon.jpeg';
-import { useUserRole } from '@/hooks/useUserRole';
 import { Badge } from '@/components/ui/badge';
 
 const mainMenuItems = [
@@ -121,6 +121,16 @@ export function AppSidebar() {
                   >
                     <Users className="h-4 w-4" />
                     <span>User Management</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => navigate('/audit-logs')}
+                    isActive={location.pathname === '/audit-logs'}
+                    className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground"
+                  >
+                    <History className="h-4 w-4" />
+                    <span>Audit Logs</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
