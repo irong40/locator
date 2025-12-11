@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,16 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Building2, Phone, Mail, MapPin } from 'lucide-react';
-import { useState } from 'react';
+import { Plus, Search, Building2, Phone, Mail, MapPin, FilterX } from 'lucide-react';
+import { useState, useMemo } from 'react';
+
+type OemEppFilter = 'all' | 'oem' | 'epp' | 'both' | 'none';
 
 export default function Vendors() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [preferenceFilter, setPreferenceFilter] = useState<string>('all');
   const [vendorLevelFilter, setVendorLevelFilter] = useState<string>('all');
+  const [oemEppFilter, setOemEppFilter] = useState<OemEppFilter>('all');
 
   const { data: vendors, isLoading } = useQuery({
     queryKey: ['vendors'],
@@ -30,22 +32,46 @@ export default function Vendors() {
     },
   });
 
-  const filteredVendors = vendors?.filter((vendor) => {
-    const matchesSearch =
-      !searchTerm ||
-      vendor.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendor.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendor.state?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendor.zip_code?.includes(searchTerm);
+  const filteredVendors = useMemo(() => {
+    return vendors?.filter((vendor) => {
+      const matchesSearch =
+        !searchTerm ||
+        vendor.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vendor.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vendor.state?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vendor.zip_code?.includes(searchTerm) ||
+        vendor.poc?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vendor.email_address?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesPreference =
-      preferenceFilter === 'all' || vendor.preference === preferenceFilter;
+      const matchesPreference =
+        preferenceFilter === 'all' || vendor.preference === preferenceFilter;
 
-    const matchesLevel =
-      vendorLevelFilter === 'all' || vendor.vendor_level === vendorLevelFilter;
+      const matchesLevel =
+        vendorLevelFilter === 'all' || vendor.vendor_level === vendorLevelFilter;
 
-    return matchesSearch && matchesPreference && matchesLevel;
-  });
+      const matchesOemEpp = (() => {
+        switch (oemEppFilter) {
+          case 'all': return true;
+          case 'oem': return vendor.oem === true;
+          case 'epp': return vendor.epp === true;
+          case 'both': return vendor.oem === true && vendor.epp === true;
+          case 'none': return !vendor.oem && !vendor.epp;
+          default: return true;
+        }
+      })();
+
+      return matchesSearch && matchesPreference && matchesLevel && matchesOemEpp;
+    });
+  }, [vendors, searchTerm, preferenceFilter, vendorLevelFilter, oemEppFilter]);
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setPreferenceFilter('all');
+    setVendorLevelFilter('all');
+    setOemEppFilter('all');
+  };
+
+  const hasActiveFilters = searchTerm || preferenceFilter !== 'all' || vendorLevelFilter !== 'all' || oemEppFilter !== 'all';
 
   return (
     <div className="space-y-6">
@@ -63,38 +89,63 @@ export default function Vendors() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name, city, state, or zip..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name, POC, city, state, zip, or email..."
+                    className="pl-10"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
               </div>
+              <Select value={oemEppFilter} onValueChange={(v) => setOemEppFilter(v as OemEppFilter)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="OEM/EPP Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Vendors</SelectItem>
+                  <SelectItem value="oem">OEM Only</SelectItem>
+                  <SelectItem value="epp">EPP Only</SelectItem>
+                  <SelectItem value="both">OEM & EPP</SelectItem>
+                  <SelectItem value="none">Neither</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={preferenceFilter} onValueChange={setPreferenceFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Preference" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Preferences</SelectItem>
+                  <SelectItem value="Preferred">Preferred</SelectItem>
+                  <SelectItem value="Do Not Use">Do Not Use</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={vendorLevelFilter} onValueChange={setVendorLevelFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Vendor Level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Levels</SelectItem>
+                  <SelectItem value="Good">Good</SelectItem>
+                  <SelectItem value="Bad">Bad</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={preferenceFilter} onValueChange={setPreferenceFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Preference" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Preferences</SelectItem>
-                <SelectItem value="Preferred">Preferred</SelectItem>
-                <SelectItem value="Do Not Use">Do Not Use</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={vendorLevelFilter} onValueChange={setVendorLevelFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Vendor Level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Levels</SelectItem>
-                <SelectItem value="Good">Good</SelectItem>
-                <SelectItem value="Bad">Bad</SelectItem>
-              </SelectContent>
-            </Select>
+            {hasActiveFilters && (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Showing {filteredVendors?.length ?? 0} of {vendors?.length ?? 0} vendors
+                </p>
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <FilterX className="h-4 w-4 mr-2" />
+                  Clear Filters
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
