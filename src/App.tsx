@@ -9,6 +9,7 @@ import Index from './pages/Index';
 import Dashboard from './pages/Dashboard';
 import Vendors from './pages/Vendors';
 import VendorDetail from './pages/VendorDetail';
+import VendorCreate from './pages/VendorCreate';
 import VendorSearch from './pages/VendorSearch';
 import NotFound from './pages/NotFound';
 
@@ -72,7 +73,7 @@ function AppRoutes() {
         path="/vendors/create"
         element={
           <ProtectedRoute>
-            <Vendors />
+            <VendorCreate />
           </ProtectedRoute>
         }
       />
