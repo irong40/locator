@@ -11,6 +11,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import logoIcon from '@/assets/logo-icon.jpeg';
 
 const menuItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
@@ -28,20 +29,24 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b border-border p-4">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <Wrench className="h-5 w-5 text-primary-foreground" />
+      <SidebarHeader className="border-b border-sidebar-border p-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg overflow-hidden">
+            <img 
+              src={logoIcon} 
+              alt="C&R Logo" 
+              className="h-full w-full object-cover"
+            />
           </div>
           <div>
-            <h2 className="font-semibold text-foreground">C&R Repair</h2>
-            <p className="text-xs text-muted-foreground">Vendor Management</p>
+            <h2 className="font-heading font-semibold text-sidebar-foreground">C&R Repair</h2>
+            <p className="text-xs text-sidebar-primary">Vendor Management</p>
           </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/70">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -49,6 +54,7 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     onClick={() => navigate(item.url)}
                     isActive={location.pathname === item.url || location.pathname.startsWith(item.url + '/')}
+                    className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground"
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>
