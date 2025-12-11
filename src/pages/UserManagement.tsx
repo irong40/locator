@@ -57,6 +57,7 @@ type UserWithRole = {
   user_id: string;
   first_name: string | null;
   last_name: string | null;
+  email: string | null;
   phone_no: string | null;
   is_active: boolean;
   created_at: string | null;
@@ -391,6 +392,7 @@ const UserManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Role</TableHead>
@@ -403,6 +405,9 @@ const UserManagement = () => {
                 <TableRow key={user.id} className={!user.is_active ? 'opacity-60' : ''}>
                   <TableCell className="font-medium">
                     {getFullName(user)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {user.email || '-'}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {user.phone_no || '-'}
