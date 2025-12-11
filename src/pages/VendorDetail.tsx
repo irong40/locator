@@ -24,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { VendorBrandManager } from '@/components/vendors/VendorBrandManager';
 import {
   ArrowLeft,
   Building2,
@@ -33,9 +34,6 @@ import {
   User,
   DollarSign,
   FileText,
-  Factory,
-  Wrench,
-  Package,
   Shield,
   Pencil,
   X,
@@ -771,102 +769,13 @@ export default function VendorDetail() {
 
         {/* Sidebar with Related Data */}
         <div className="space-y-6">
-          {/* OEM Brands */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Factory className="h-4 w-4 text-secondary" />
-                OEM Brands ({oemBrands?.length || 0})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {oemBrands && oemBrands.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {oemBrands.map((item) => (
-                    <Badge key={item.id} variant="outline">
-                      {item.oem_brands?.oem_brand}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No OEM brands assigned</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* EPP Brands */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Factory className="h-4 w-4 text-cta" />
-                EPP Brands ({eppBrands?.length || 0})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {eppBrands && eppBrands.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {eppBrands.map((item) => (
-                    <Badge key={item.id} variant="outline" className="border-cta text-cta">
-                      {item.oem_brands?.oem_brand}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No EPP brands assigned</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Engine Brands */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Wrench className="h-4 w-4 text-primary" />
-                Engine Brands ({engineBrands?.length || 0})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {engineBrands && engineBrands.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {engineBrands.map((item) => (
-                    <Badge 
-                      key={item.id} 
-                      variant={item.is_certified ? 'default' : 'secondary'}
-                      className="flex items-center gap-1"
-                    >
-                      {item.engine_brands?.engine_brand}
-                      {item.is_certified && <Shield className="h-3 w-3" />}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No engine brands assigned</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Products */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Package className="h-4 w-4 text-accent" />
-                Products ({products?.length || 0})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {products && products.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {products.map((item) => (
-                    <Badge key={item.id} variant="secondary">
-                      {item.products?.product}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No products assigned</p>
-              )}
-            </CardContent>
-          </Card>
+          <VendorBrandManager
+            vendorId={id!}
+            oemBrands={oemBrands ?? []}
+            eppBrands={eppBrands ?? []}
+            engineBrands={engineBrands ?? []}
+            products={products ?? []}
+          />
         </div>
       </div>
     </div>
