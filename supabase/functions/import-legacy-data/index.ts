@@ -6,20 +6,65 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// ID mapping storage (old integer ID → new UUID)
-const idMappings: Record<string, Record<number, string>> = {
-  engine_brands: {},
-  oem_brands: {},
-  products: {},
-  payment_types: {},
-  vendors: {},
-  users: {},
-};
-
 interface ImportRequest {
   table: string;
   data: Record<string, unknown>[];
-  mappings?: Record<string, Record<number, string>>;
+}
+
+// Save mappings to database
+async function saveMappings(supabase: any, sourceTable: string, mappings: Record<number, string>) {
+  const records = Object.entries(mappings).map(([oldId, newId]) => ({
+    source_table: sourceTable,
+    old_id: parseInt(oldId),
+    new_id: newId,
+  }));
+
+  if (records.length === 0) return;
+
+  // Insert in batches of 500
+  const batchSize = 500;
+  for (let i = 0; i < records.length; i += batchSize) {
+    const batch = records.slice(i, i + batchSize);
+    const { error } = await supabase.from('migration_mappings').upsert(batch, {
+      onConflict: 'source_table,old_id',
+    });
+    if (error) {
+      console.error(`Error saving mappings for ${sourceTable}:`, error.message);
+    }
+  }
+  console.log(`Saved ${records.length} mappings for ${sourceTable}`);
+}
+
+// Load mappings from database
+async function loadMappings(supabase: any, sourceTable: string): Promise<Record<number, string>> {
+  const { data, error } = await supabase
+    .from('migration_mappings')
+    .select('old_id, new_id')
+    .eq('source_table', sourceTable);
+
+  if (error) {
+    console.error(`Error loading mappings for ${sourceTable}:`, error.message);
+    return {};
+  }
+
+  const mappings: Record<number, string> = {};
+  data?.forEach((r: any) => {
+    mappings[r.old_id] = r.new_id;
+  });
+  console.log(`Loaded ${Object.keys(mappings).length} mappings for ${sourceTable}`);
+  return mappings;
+}
+
+// Load all mappings needed for an import
+async function loadAllMappings(supabase: any): Promise<Record<string, Record<number, string>>> {
+  const tables = ['engine_brands', 'oem_brands', 'products', 'payment_types', 'vendors', 'users'];
+  const allMappings: Record<string, Record<number, string>> = {};
+
+  for (const table of tables) {
+    allMappings[table] = await loadMappings(supabase, table);
+  }
+
+  return allMappings;
 }
 
 serve(async (req) => {
@@ -67,14 +112,12 @@ serve(async (req) => {
       });
     }
 
-    const { table, data, mappings }: ImportRequest = await req.json();
+    const { table, data }: ImportRequest = await req.json();
     
-    // Merge provided mappings with stored ones
-    if (mappings) {
-      Object.assign(idMappings, mappings);
-    }
-
     console.log(`Importing ${data.length} records into ${table}`);
+
+    // Load existing mappings from database for imports that need them
+    const storedMappings = await loadAllMappings(supabase);
 
     let result;
     switch (table) {
@@ -94,28 +137,33 @@ serve(async (req) => {
         result = await importZipcodes(supabase, data);
         break;
       case 'vendors':
-        result = await importVendors(supabase, data, mappings?.payment_types || {});
+        result = await importVendors(supabase, data, storedMappings.payment_types);
         break;
       case 'vendor_engine_brands':
-        result = await importVendorEngineBrands(supabase, data, mappings || {});
+        result = await importVendorEngineBrands(supabase, data, storedMappings);
         break;
       case 'vendor_oem_brands':
-        result = await importVendorOemBrands(supabase, data, mappings || {});
+        result = await importVendorOemBrands(supabase, data, storedMappings);
         break;
       case 'vendor_epp_brands':
-        result = await importVendorEppBrands(supabase, data, mappings || {});
+        result = await importVendorEppBrands(supabase, data, storedMappings);
         break;
       case 'vendor_products':
-        result = await importVendorProducts(supabase, data, mappings || {});
+        result = await importVendorProducts(supabase, data, storedMappings);
         break;
       case 'users':
-        result = await importUsers(supabase, data, mappings || {});
+        result = await importUsers(supabase, data, storedMappings);
         break;
       default:
         return new Response(JSON.stringify({ error: `Unknown table: ${table}` }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
+    }
+
+    // Save new mappings to database
+    if (result.mappings && Object.keys(result.mappings).length > 0) {
+      await saveMappings(supabase, table, result.mappings);
     }
 
     return new Response(JSON.stringify(result), {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Upload, CheckCircle, XCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { Upload, CheckCircle, XCircle, Loader2, AlertTriangle, Trash2, RefreshCw } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AccessDenied } from '@/components/auth/AccessDenied';
 
@@ -36,6 +36,11 @@ type MigrationPhase = {
   name: string;
   tables: TableName[];
   description: string;
+};
+
+type StoredMapping = {
+  source_table: string;
+  count: number;
 };
 
 const PHASES: MigrationPhase[] = [
@@ -84,8 +89,61 @@ export default function DataMigration() {
   });
   const [importing, setImporting] = useState<TableName | null>(null);
   const [results, setResults] = useState<Record<string, ImportResult>>({});
-  const [mappings, setMappings] = useState<Record<string, Record<number, string>>>({});
+  const [storedMappings, setStoredMappings] = useState<StoredMapping[]>([]);
+  const [loadingMappings, setLoadingMappings] = useState(true);
   const [progress, setProgress] = useState(0);
+
+  // Fetch stored mappings on mount
+  useEffect(() => {
+    if (role === 'Admin') {
+      fetchStoredMappings();
+    }
+  }, [role]);
+
+  const fetchStoredMappings = async () => {
+    setLoadingMappings(true);
+    try {
+      const { data, error } = await supabase
+        .from('migration_mappings')
+        .select('source_table')
+        .order('source_table');
+
+      if (error) throw error;
+
+      // Group by source_table and count
+      const counts: Record<string, number> = {};
+      data?.forEach((row: { source_table: string }) => {
+        counts[row.source_table] = (counts[row.source_table] || 0) + 1;
+      });
+
+      setStoredMappings(
+        Object.entries(counts).map(([source_table, count]) => ({
+          source_table,
+          count,
+        }))
+      );
+    } catch (error: any) {
+      console.error('Error fetching mappings:', error);
+    } finally {
+      setLoadingMappings(false);
+    }
+  };
+
+  const clearMappings = async () => {
+    if (!confirm('Are you sure you want to clear all stored ID mappings? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('migration_mappings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw error;
+      
+      setStoredMappings([]);
+      toast.success('All mappings cleared');
+    } catch (error: any) {
+      toast.error(`Failed to clear mappings: ${error.message}`);
+    }
+  };
 
   if (roleLoading) {
     return (
@@ -165,7 +223,7 @@ export default function DataMigration() {
       setProgress(50);
 
       const response = await supabase.functions.invoke('import-legacy-data', {
-        body: { table, data, mappings },
+        body: { table, data },
       });
 
       setProgress(100);
@@ -178,10 +236,8 @@ export default function DataMigration() {
       const result = response.data as ImportResult;
       setResults(prev => ({ ...prev, [table]: result }));
 
-      // Store mappings for subsequent imports
-      if (result.mappings) {
-        setMappings(prev => ({ ...prev, [table]: result.mappings! }));
-      }
+      // Refresh stored mappings
+      await fetchStoredMappings();
 
       if (result.errors.length > 0) {
         toast.warning(`Imported ${result.inserted} records with ${result.errors.length} errors`);
@@ -209,6 +265,10 @@ export default function DataMigration() {
     if (results[table]) {
       return results[table].errors.length > 0 ? 'warning' : 'success';
     }
+    // Check if we have stored mappings for this table
+    if (storedMappings.some(m => m.source_table === table)) {
+      return 'migrated';
+    }
     if (files[table]) return 'ready';
     return 'pending';
   };
@@ -219,6 +279,8 @@ export default function DataMigration() {
         return <Badge variant="secondary"><Loader2 className="h-3 w-3 animate-spin mr-1" />Importing</Badge>;
       case 'success':
         return <Badge className="bg-green-600"><CheckCircle className="h-3 w-3 mr-1" />Done</Badge>;
+      case 'migrated':
+        return <Badge className="bg-blue-600"><CheckCircle className="h-3 w-3 mr-1" />Migrated</Badge>;
       case 'warning':
         return <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" />Errors</Badge>;
       case 'ready':
@@ -241,6 +303,49 @@ export default function DataMigration() {
           </Button>
         </div>
 
+        {/* Stored Mappings Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Stored ID Mappings</CardTitle>
+                <CardDescription>Persisted mappings from previous imports (survive page refresh)</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={fetchStoredMappings} disabled={loadingMappings}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loadingMappings ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+                {storedMappings.length > 0 && (
+                  <Button variant="destructive" size="sm" onClick={clearMappings}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear All
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingMappings ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : storedMappings.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No stored mappings yet</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {storedMappings.map(({ source_table, count }) => (
+                  <div key={source_table} className="text-center p-3 border rounded-lg bg-muted/50">
+                    <p className="font-medium text-sm">{source_table}</p>
+                    <p className="text-2xl font-bold text-primary">{count}</p>
+                    <p className="text-xs text-muted-foreground">mappings</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {importing && (
           <Card>
             <CardContent className="pt-6">
@@ -255,7 +360,7 @@ export default function DataMigration() {
           </Card>
         )}
 
-        {PHASES.map((phase, phaseIndex) => (
+        {PHASES.map((phase) => (
           <Card key={phase.name}>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -284,6 +389,11 @@ export default function DataMigration() {
                         <p className="text-sm text-muted-foreground">
                           {results[table].inserted} inserted
                           {results[table].errors.length > 0 && `, ${results[table].errors.length} errors`}
+                        </p>
+                      )}
+                      {storedMappings.find(m => m.source_table === table) && !results[table] && (
+                        <p className="text-sm text-muted-foreground">
+                          {storedMappings.find(m => m.source_table === table)?.count} existing mappings
                         </p>
                       )}
                     </div>
@@ -358,26 +468,6 @@ export default function DataMigration() {
                   ))}
                 </div>
               </ScrollArea>
-            </CardContent>
-          </Card>
-        )}
-
-        {Object.keys(mappings).length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>ID Mappings</CardTitle>
-              <CardDescription>Old Laravel IDs → New Supabase UUIDs</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries(mappings).map(([table, map]) => (
-                  <div key={table} className="text-center p-3 border rounded-lg">
-                    <p className="font-medium">{table}</p>
-                    <p className="text-2xl font-bold text-primary">{Object.keys(map).length}</p>
-                    <p className="text-xs text-muted-foreground">mappings</p>
-                  </div>
-                ))}
-              </div>
             </CardContent>
           </Card>
         )}
