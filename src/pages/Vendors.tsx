@@ -1,193 +1,216 @@
-import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Search, Building2, Phone, Mail, MapPin } from 'lucide-react';
 import { useState } from 'react';
-import { Plus, Search, Building2, Mail, Phone, Globe } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
 
-const Vendors = () => {
-  const { userRole } = useAuth();
+export default function Vendors() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [preferenceFilter, setPreferenceFilter] = useState<string>('all');
+  const [vendorLevelFilter, setVendorLevelFilter] = useState<string>('all');
 
   const { data: vendors, isLoading } = useQuery({
-    queryKey: ['vendors', searchTerm, statusFilter],
+    queryKey: ['vendors'],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('vendors')
-        .select(`
-          *,
-          users:owner_user_id (
-            profiles (first_name, last_name)
-          )
-        `);
-
-      if (searchTerm) {
-        query = query.ilike('name', `%${searchTerm}%`);
-      }
-
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter as 'active' | 'draft' | 'suspended');
-      }
-
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
+        .select('*')
+        .order('vendor_name');
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800 hover:bg-green-100';
-      case 'suspended':
-        return 'bg-red-100 text-red-800 hover:bg-red-100';
-      case 'draft':
-        return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100';
-      default:
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-100';
-    }
-  };
+  const filteredVendors = vendors?.filter((vendor) => {
+    const matchesSearch =
+      !searchTerm ||
+      vendor.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.state?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.zip_code?.includes(searchTerm);
+
+    const matchesPreference =
+      preferenceFilter === 'all' || vendor.preference === preferenceFilter;
+
+    const matchesLevel =
+      vendorLevelFilter === 'all' || vendor.vendor_level === vendorLevelFilter;
+
+    return matchesSearch && matchesPreference && matchesLevel;
+  });
 
   return (
-    <AppLayout breadcrumb={[{ name: 'Dashboard', href: '/dashboard' }, { name: 'Vendors' }]}>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Vendors</h1>
-            <p className="text-muted-foreground">
-              Manage marketplace vendors and their information
-            </p>
-          </div>
-          {userRole === 'Admin' && (
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Vendor
-            </Button>
-          )}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Vendors</h1>
+          <p className="text-muted-foreground">Manage vendor directory</p>
         </div>
-
-        {/* Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Filters</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search vendors..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Vendors Grid */}
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {vendors?.map((vendor) => (
-              <Card key={vendor.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <Building2 className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">{vendor.name}</CardTitle>
-                        <CardDescription>
-                          Owner: {vendor.users?.profiles?.first_name} {vendor.users?.profiles?.last_name}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <Badge className={getStatusColor(vendor.status)}>
-                      {vendor.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {vendor.contact_email && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="h-4 w-4" />
-                      {vendor.contact_email}
-                    </div>
-                  )}
-                  {vendor.contact_phone && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Phone className="h-4 w-4" />
-                      {vendor.contact_phone}
-                    </div>
-                  )}
-                  {vendor.website && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Globe className="h-4 w-4" />
-                      <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                        {vendor.website}
-                      </a>
-                    </div>
-                  )}
-                  <div className="pt-2">
-                    <Button variant="outline" size="sm" className="w-full">
-                      View Details
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {vendors?.length === 0 && !isLoading && (
-          <Card>
-            <CardContent className="text-center py-8">
-              <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No vendors found</h3>
-              <p className="text-muted-foreground mb-4">
-                {searchTerm || statusFilter !== 'all' 
-                  ? 'Try adjusting your search or filters'
-                  : 'Get started by adding your first vendor to the marketplace'
-                }
-              </p>
-              {userRole === 'Admin' && (
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add First Vendor
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )}
+        <Button onClick={() => navigate('/vendors/create')}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Vendor
+        </Button>
       </div>
-    </AppLayout>
-  );
-};
 
-export default Vendors;
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, city, state, or zip..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+            <Select value={preferenceFilter} onValueChange={setPreferenceFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Preference" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Preferences</SelectItem>
+                <SelectItem value="Preferred">Preferred</SelectItem>
+                <SelectItem value="Do Not Use">Do Not Use</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={vendorLevelFilter} onValueChange={setVendorLevelFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Vendor Level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Levels</SelectItem>
+                <SelectItem value="Good">Good</SelectItem>
+                <SelectItem value="Bad">Bad</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Vendors Table */}
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          ) : filteredVendors && filteredVendors.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Vendor Name</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Rate</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Tags</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredVendors.map((vendor) => (
+                  <TableRow
+                    key={vendor.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/vendors/${vendor.id}`)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">{vendor.vendor_name}</p>
+                          {vendor.poc && (
+                            <p className="text-sm text-muted-foreground">POC: {vendor.poc}</p>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-sm">
+                        <MapPin className="h-3 w-3 text-muted-foreground" />
+                        {[vendor.city, vendor.state].filter(Boolean).join(', ') || '-'}
+                        {vendor.zip_code && (
+                          <span className="text-muted-foreground ml-1">({vendor.zip_code})</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1 text-sm">
+                        {vendor.phone_no && (
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3 text-muted-foreground" />
+                            {vendor.phone_no}
+                          </div>
+                        )}
+                        {vendor.email_address && (
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3 text-muted-foreground" />
+                            {vendor.email_address}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {vendor.hr_labour_rate ? `$${vendor.hr_labour_rate}/hr` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {vendor.preference && (
+                          <Badge
+                            variant={vendor.preference === 'Preferred' ? 'default' : 'destructive'}
+                          >
+                            {vendor.preference}
+                          </Badge>
+                        )}
+                        {vendor.vendor_level && (
+                          <Badge
+                            variant={vendor.vendor_level === 'Good' ? 'outline' : 'secondary'}
+                          >
+                            {vendor.vendor_level}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1 flex-wrap">
+                        {vendor.oem && (
+                          <Badge variant="secondary" className="text-xs">
+                            OEM
+                          </Badge>
+                        )}
+                        {vendor.epp && (
+                          <Badge variant="secondary" className="text-xs">
+                            EPP
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-12">
+              <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No vendors found</p>
+              <Button variant="outline" className="mt-4" onClick={() => navigate('/vendors/create')}>
+                Add Your First Vendor
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

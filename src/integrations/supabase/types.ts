@@ -14,319 +14,98 @@ export type Database = {
   }
   public: {
     Tables: {
-      audit_logs: {
-        Row: {
-          action: string | null
-          actor_user_id: string | null
-          after: Json | null
-          before: Json | null
-          created_at: string | null
-          entity_id: string | null
-          entity_type: string | null
-          id: string
-        }
-        Insert: {
-          action?: string | null
-          actor_user_id?: string | null
-          after?: Json | null
-          before?: Json | null
-          created_at?: string | null
-          entity_id?: string | null
-          entity_type?: string | null
-          id?: string
-        }
-        Update: {
-          action?: string | null
-          actor_user_id?: string | null
-          after?: Json | null
-          before?: Json | null
-          created_at?: string | null
-          entity_id?: string | null
-          entity_type?: string | null
-          id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "audit_logs_actor_user_id_fkey"
-            columns: ["actor_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       engine_brands: {
         Row: {
           created_at: string | null
-          description: string | null
+          engine_brand: string
           id: string
-          name: string
-          oem: boolean | null
-          slug: string | null
-          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
-          description?: string | null
+          engine_brand: string
           id?: string
-          name: string
-          oem?: boolean | null
-          slug?: string | null
-          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
-          description?: string | null
+          engine_brand?: string
           id?: string
-          name?: string
-          oem?: boolean | null
-          slug?: string | null
-          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      oem_brands: {
+        Row: {
+          created_at: string | null
+          id: string
+          oem_brand: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          oem_brand: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          oem_brand?: string
         }
         Relationships: []
       }
       payment_types: {
         Row: {
-          code: string
           created_at: string | null
           id: string
-          label: string | null
-          terms: Json | null
-          updated_at: string | null
+          payment_type: string
         }
         Insert: {
-          code: string
           created_at?: string | null
           id?: string
-          label?: string | null
-          terms?: Json | null
-          updated_at?: string | null
+          payment_type: string
         }
         Update: {
-          code?: string
           created_at?: string | null
           id?: string
-          label?: string | null
-          terms?: Json | null
-          updated_at?: string | null
+          payment_type?: string
         }
         Relationships: []
       }
       products: {
         Row: {
-          active: boolean | null
-          created_at: string | null
-          currency: string | null
-          description: string | null
-          engine_brand_id: string | null
-          id: string
-          images: string[] | null
-          inventory_qty: number | null
-          name: string
-          payment_type_id: string | null
-          price: number
-          sku: string
-          specs: Json | null
-          updated_at: string | null
-          vendor_id: string
-        }
-        Insert: {
-          active?: boolean | null
-          created_at?: string | null
-          currency?: string | null
-          description?: string | null
-          engine_brand_id?: string | null
-          id?: string
-          images?: string[] | null
-          inventory_qty?: number | null
-          name: string
-          payment_type_id?: string | null
-          price: number
-          sku: string
-          specs?: Json | null
-          updated_at?: string | null
-          vendor_id: string
-        }
-        Update: {
-          active?: boolean | null
-          created_at?: string | null
-          currency?: string | null
-          description?: string | null
-          engine_brand_id?: string | null
-          id?: string
-          images?: string[] | null
-          inventory_qty?: number | null
-          name?: string
-          payment_type_id?: string | null
-          price?: number
-          sku?: string
-          specs?: Json | null
-          updated_at?: string | null
-          vendor_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "products_engine_brand_id_fkey"
-            columns: ["engine_brand_id"]
-            isOneToOne: false
-            referencedRelation: "engine_brands"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_payment_type_id_fkey"
-            columns: ["payment_type_id"]
-            isOneToOne: false
-            referencedRelation: "payment_types"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string | null
-          first_name: string | null
-          id: string
-          last_name: string | null
-          phone: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string | null
-          first_name?: string | null
-          id?: string
-          last_name?: string | null
-          phone?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string | null
-          first_name?: string | null
-          id?: string
-          last_name?: string | null
-          phone?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      roles: {
-        Row: {
           created_at: string | null
           id: string
-          name: string
-          permissions: Json | null
-          updated_at: string | null
+          product: string
         }
         Insert: {
           created_at?: string | null
           id?: string
-          name: string
-          permissions?: Json | null
-          updated_at?: string | null
+          product: string
         }
         Update: {
           created_at?: string | null
           id?: string
-          name?: string
-          permissions?: Json | null
-          updated_at?: string | null
+          product?: string
         }
         Relationships: []
       }
-      users: {
-        Row: {
-          created_at: string | null
-          email: string
-          id: string
-          is_active: boolean | null
-          last_login_at: string | null
-          password_hash: string
-          profile_id: string | null
-          role_id: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          email: string
-          id?: string
-          is_active?: boolean | null
-          last_login_at?: string | null
-          password_hash: string
-          profile_id?: string | null
-          role_id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          email?: string
-          id?: string
-          is_active?: boolean | null
-          last_login_at?: string | null
-          password_hash?: string
-          profile_id?: string | null
-          role_id?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "users_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "users_role_id_fkey"
-            columns: ["role_id"]
-            isOneToOne: false
-            referencedRelation: "roles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       vendor_engine_brands: {
         Row: {
-          authorized: boolean | null
           created_at: string | null
           engine_brand_id: string
           id: string
-          updated_at: string | null
+          is_certified: boolean | null
           vendor_id: string
         }
         Insert: {
-          authorized?: boolean | null
           created_at?: string | null
           engine_brand_id: string
           id?: string
-          updated_at?: string | null
+          is_certified?: boolean | null
           vendor_id: string
         }
         Update: {
-          authorized?: boolean | null
           created_at?: string | null
           engine_brand_id?: string
           id?: string
-          updated_at?: string | null
+          is_certified?: boolean | null
           vendor_id?: string
         }
         Relationships: [
@@ -346,72 +125,227 @@ export type Database = {
           },
         ]
       }
-      vendors: {
+      vendor_epp_brands: {
         Row: {
-          address: Json | null
-          contact_email: string | null
-          contact_phone: string | null
           created_at: string | null
           id: string
-          name: string
-          owner_user_id: string | null
-          slug: string | null
-          status: Database["public"]["Enums"]["vendor_status"] | null
-          updated_at: string | null
-          website: string | null
+          oem_brand_id: string
+          vendor_id: string
         }
         Insert: {
-          address?: Json | null
-          contact_email?: string | null
-          contact_phone?: string | null
           created_at?: string | null
           id?: string
-          name: string
-          owner_user_id?: string | null
-          slug?: string | null
-          status?: Database["public"]["Enums"]["vendor_status"] | null
-          updated_at?: string | null
-          website?: string | null
+          oem_brand_id: string
+          vendor_id: string
         }
         Update: {
-          address?: Json | null
-          contact_email?: string | null
-          contact_phone?: string | null
           created_at?: string | null
           id?: string
-          name?: string
-          owner_user_id?: string | null
-          slug?: string | null
-          status?: Database["public"]["Enums"]["vendor_status"] | null
-          updated_at?: string | null
-          website?: string | null
+          oem_brand_id?: string
+          vendor_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "vendors_owner_user_id_fkey"
-            columns: ["owner_user_id"]
+            foreignKeyName: "vendor_epp_brands_oem_brand_id_fkey"
+            columns: ["oem_brand_id"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "oem_brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_epp_brands_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
+      }
+      vendor_oem_brands: {
+        Row: {
+          created_at: string | null
+          id: string
+          oem_brand_id: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          oem_brand_id: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          oem_brand_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_oem_brands_oem_brand_id_fkey"
+            columns: ["oem_brand_id"]
+            isOneToOne: false
+            referencedRelation: "oem_brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_oem_brands_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_products: {
+        Row: {
+          created_at: string | null
+          id: string
+          product_id: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          product_id: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          product_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_products_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendors: {
+        Row: {
+          address: string | null
+          city: string | null
+          comments: string | null
+          created_at: string | null
+          email_address: string | null
+          epp: boolean | null
+          fax_no: string | null
+          hr_labour_rate: number | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          oem: boolean | null
+          payment_type_id: string | null
+          phone_no: string | null
+          poc: string | null
+          preference: string | null
+          state: string | null
+          updated_at: string | null
+          vendor_level: string | null
+          vendor_name: string
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          comments?: string | null
+          created_at?: string | null
+          email_address?: string | null
+          epp?: boolean | null
+          fax_no?: string | null
+          hr_labour_rate?: number | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          oem?: boolean | null
+          payment_type_id?: string | null
+          phone_no?: string | null
+          poc?: string | null
+          preference?: string | null
+          state?: string | null
+          updated_at?: string | null
+          vendor_level?: string | null
+          vendor_name: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          comments?: string | null
+          created_at?: string | null
+          email_address?: string | null
+          epp?: boolean | null
+          fax_no?: string | null
+          hr_labour_rate?: number | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          oem?: boolean | null
+          payment_type_id?: string | null
+          phone_no?: string | null
+          poc?: string | null
+          preference?: string | null
+          state?: string | null
+          updated_at?: string | null
+          vendor_level?: string | null
+          vendor_name?: string
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendors_payment_type_id_fkey"
+            columns: ["payment_type_id"]
+            isOneToOne: false
+            referencedRelation: "payment_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zipcode_lists: {
+        Row: {
+          created_at: string | null
+          id: string
+          latitude: number
+          longitude: number
+          zipcode: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          latitude: number
+          longitude: number
+          zipcode: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          zipcode?: string
+        }
+        Relationships: []
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      get_user_role: {
-        Args: { user_id: string }
-        Returns: string
-      }
-      get_user_vendor_id: {
-        Args: { user_id: string }
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
-      vendor_status: "draft" | "active" | "suspended"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -538,8 +472,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      vendor_status: ["draft", "active", "suspended"],
-    },
+    Enums: {},
   },
 } as const
