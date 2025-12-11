@@ -1,4 +1,4 @@
-import { Building2, Factory, Package, CreditCard, LayoutDashboard, Wrench } from 'lucide-react';
+import { Building2, Factory, Package, CreditCard, LayoutDashboard, Wrench, MapPin } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Sidebar,
@@ -14,6 +14,7 @@ import {
 
 const menuItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+  { title: 'Find Vendors', url: '/vendor-search', icon: MapPin },
   { title: 'Vendors', url: '/vendors', icon: Building2 },
   { title: 'OEM Brands', url: '/oem-brands', icon: Factory },
   { title: 'Engine Brands', url: '/engine-brands', icon: Wrench },
