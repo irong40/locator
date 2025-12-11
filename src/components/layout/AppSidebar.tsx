@@ -1,4 +1,4 @@
-import { Building2, Factory, Package, CreditCard, LayoutDashboard, Wrench, MapPin, Settings } from 'lucide-react';
+import { Building2, Factory, Package, CreditCard, LayoutDashboard, Wrench, MapPin, Settings, Users } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Sidebar,
@@ -100,6 +100,29 @@ export function AppSidebar() {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-foreground/70">
+              <Users className="h-3 w-3 mr-1 inline" />
+              Administration
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => navigate('/user-management')}
+                    isActive={location.pathname === '/user-management'}
+                    className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground"
+                  >
+                    <Users className="h-4 w-4" />
+                    <span>User Management</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

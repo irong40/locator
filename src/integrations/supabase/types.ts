@@ -91,6 +91,7 @@ export type Database = {
           created_at: string | null
           first_name: string | null
           id: string
+          is_active: boolean
           last_name: string | null
           old_laravel_id: number | null
           phone_no: string | null
@@ -102,6 +103,7 @@ export type Database = {
           created_at?: string | null
           first_name?: string | null
           id?: string
+          is_active?: boolean
           last_name?: string | null
           old_laravel_id?: number | null
           phone_no?: string | null
@@ -113,6 +115,7 @@ export type Database = {
           created_at?: string | null
           first_name?: string | null
           id?: string
+          is_active?: boolean
           last_name?: string | null
           old_laravel_id?: number | null
           phone_no?: string | null

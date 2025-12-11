@@ -21,6 +21,7 @@ import PaymentTypes from './pages/PaymentTypes';
 import Profile from './pages/Profile';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import UserManagement from './pages/UserManagement';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -140,6 +141,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['Admin', 'Manager']}>
             <PaymentTypes />
+          </ProtectedRoute>
+        }
+      />
+      {/* Admin only */}
+      <Route
+        path="/user-management"
+        element={
+          <ProtectedRoute allowedRoles={['Admin']}>
+            <UserManagement />
           </ProtectedRoute>
         }
       />
