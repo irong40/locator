@@ -50,7 +50,9 @@ export function useVendorSearch() {
         .from('vendors')
         .select('*')
         .not('latitude', 'is', null)
-        .not('longitude', 'is', null);
+        .not('longitude', 'is', null)
+        .neq('latitude', 0)
+        .neq('longitude', 0);
       
       if (error) throw error;
       if (!data) return [];
