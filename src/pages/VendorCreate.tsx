@@ -78,7 +78,7 @@ export default function VendorCreate() {
 
   const createVendor = useMutation({
     mutationFn: async (data: VendorFormData) => {
-      const { error } = await supabase.from('vendors').insert({
+      const { data: created, error } = await supabase.from('vendors').insert({
         vendor_name: data.vendor_name,
         poc: data.poc || null,
         phone_no: data.phone_no || null,
@@ -97,14 +97,18 @@ export default function VendorCreate() {
         latitude: data.latitude ?? null,
         longitude: data.longitude ?? null,
         comments: data.comments || null,
-      });
+      }).select().single();
       if (error) throw error;
+      return created;
     },
-    onSuccess: () => {
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
+      const coordsPopulated = created.latitude && created.longitude;
       toast({
         title: 'Vendor created',
-        description: 'The vendor has been created successfully.',
+        description: coordsPopulated 
+          ? `Coordinates auto-populated: ${created.latitude?.toFixed(4)}, ${created.longitude?.toFixed(4)}`
+          : 'The vendor has been created successfully.',
       });
       navigate('/vendors');
     },
