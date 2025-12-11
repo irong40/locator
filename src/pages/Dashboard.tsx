@@ -1,163 +1,184 @@
-import { useAuth } from '@/hooks/useAuth';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Package, Wrench, Users, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Building2, Package, Factory, CreditCard, MapPin, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-const Dashboard = () => {
-  const { userRole } = useAuth();
+export default function Dashboard() {
+  const navigate = useNavigate();
+  const [zipCode, setZipCode] = useState('');
 
-  // Fetch dashboard stats
   const { data: stats } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const [vendorsResult, productsResult, brandsResult, usersResult] = await Promise.all([
+      const [vendors, products, oemBrands, engineBrands, paymentTypes] = await Promise.all([
         supabase.from('vendors').select('*', { count: 'exact', head: true }),
         supabase.from('products').select('*', { count: 'exact', head: true }),
+        supabase.from('oem_brands').select('*', { count: 'exact', head: true }),
         supabase.from('engine_brands').select('*', { count: 'exact', head: true }),
-        supabase.from('users').select('*', { count: 'exact', head: true }),
+        supabase.from('payment_types').select('*', { count: 'exact', head: true }),
       ]);
-
       return {
-        vendors: vendorsResult.count || 0,
-        products: productsResult.count || 0,
-        brands: brandsResult.count || 0,
-        users: usersResult.count || 0,
+        vendors: vendors.count ?? 0,
+        products: products.count ?? 0,
+        oemBrands: oemBrands.count ?? 0,
+        engineBrands: engineBrands.count ?? 0,
+        paymentTypes: paymentTypes.count ?? 0,
       };
     },
   });
 
-  // Fetch low inventory products
-  const { data: lowInventory } = useQuery({
-    queryKey: ['low-inventory'],
+  const { data: recentVendors } = useQuery({
+    queryKey: ['recent-vendors'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('name, sku, inventory_qty, vendors(name)')
-        .lte('inventory_qty', 5)
-        .eq('active', true)
+      const { data } = await supabase
+        .from('vendors')
+        .select('*')
+        .order('created_at', { ascending: false })
         .limit(5);
-
-      if (error) throw error;
-      return data;
+      return data ?? [];
     },
   });
 
-  const dashboardCards = [
-    {
-      title: 'Total Vendors',
-      value: stats?.vendors || 0,
-      icon: Building2,
-      description: 'Active marketplace vendors',
-    },
-    {
-      title: 'Total Products',
-      value: stats?.products || 0,
-      icon: Package,
-      description: 'Products in catalog',
-    },
-    {
-      title: 'Engine Brands',
-      value: stats?.brands || 0,
-      icon: Wrench,
-      description: 'Available brands',
-    },
-    {
-      title: 'Users',
-      value: stats?.users || 0,
-      icon: Users,
-      description: 'Platform users',
-      adminOnly: true,
-    },
-  ];
+  const handleSearch = () => {
+    if (zipCode.trim()) {
+      navigate(`/vendors?zip=${encodeURIComponent(zipCode.trim())}`);
+    }
+  };
 
   return (
-    <AppLayout breadcrumb={[{ name: 'Dashboard' }]}>
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome to the Engine Marketplace. Here's an overview of your system.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">C&R Repair Solutions</h1>
+        <p className="text-muted-foreground">Vendor Management System</p>
+      </div>
 
-        {/* Stats Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {dashboardCards
-            .filter(card => !card.adminOnly || userRole === 'Admin')
-            .map((card) => (
-            <Card key={card.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {card.title}
-                </CardTitle>
-                <card.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{card.value}</div>
-                <p className="text-xs text-muted-foreground">
-                  {card.description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {/* Quick Search */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            Find Vendors by Location
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 items-end">
+            <div className="flex-1">
+              <Label htmlFor="zip">Zip Code</Label>
+              <Input
+                id="zip"
+                placeholder="Enter zip code..."
+                value={zipCode}
+                onChange={(e) => setZipCode(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              />
+            </div>
+            <Button onClick={handleSearch}>
+              <MapPin className="h-4 w-4 mr-2" />
+              Search Vendors
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Low Inventory Alert */}
-        {lowInventory && lowInventory.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-orange-500" />
-                Low Inventory Alert
-              </CardTitle>
-              <CardDescription>
-                Products with inventory of 5 or less
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {lowInventory.map((product, index) => (
-                  <div key={index} className="flex justify-between items-center p-2 rounded border">
-                    <div>
-                      <p className="font-medium">{product.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        SKU: {product.sku} • Vendor: {product.vendors?.name}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-orange-600">
-                        {product.inventory_qty} left
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Recent Activity */}
+      {/* Stats Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Recent Activity
-            </CardTitle>
-            <CardDescription>
-              Latest updates to your marketplace
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">
-              Activity tracking will be available once you start adding data to your marketplace.
-            </p>
+            <div className="text-2xl font-bold">{stats?.vendors ?? 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Products</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.products ?? 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">OEM Brands</CardTitle>
+            <Factory className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.oemBrands ?? 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Engine Brands</CardTitle>
+            <Factory className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.engineBrands ?? 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Payment Types</CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.paymentTypes ?? 0}</div>
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
-  );
-};
 
-export default Dashboard;
+      {/* Recent Vendors */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Vendors</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentVendors && recentVendors.length > 0 ? (
+            <div className="space-y-4">
+              {recentVendors.map((vendor) => (
+                <div
+                  key={vendor.id}
+                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-colors"
+                  onClick={() => navigate(`/vendors/${vendor.id}`)}
+                >
+                  <div>
+                    <p className="font-medium">{vendor.vendor_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {[vendor.city, vendor.state].filter(Boolean).join(', ') || 'No location'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {vendor.oem && (
+                      <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        OEM
+                      </span>
+                    )}
+                    {vendor.epp && (
+                      <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        EPP
+                      </span>
+                    )}
+                    {vendor.preference === 'Preferred' && (
+                      <span className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                        Preferred
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">No vendors yet. Add your first vendor to get started.</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
