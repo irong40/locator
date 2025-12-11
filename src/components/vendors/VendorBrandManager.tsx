@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Factory, Wrench, Package, Plus, X, Shield, Loader2 } from 'lucide-react';
+import { Factory, Wrench, Package, Plus, X, Shield, Loader2, Search } from 'lucide-react';
 
 type BrandType = 'oem' | 'epp' | 'engine' | 'product';
 
@@ -38,6 +39,23 @@ export function VendorBrandManager({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeDialog, setActiveDialog] = useState<BrandType | null>(null);
+  const [searchQueries, setSearchQueries] = useState<Record<BrandType, string>>({
+    oem: '',
+    epp: '',
+    engine: '',
+    product: '',
+  });
+
+  const updateSearch = (type: BrandType, value: string) => {
+    setSearchQueries((prev) => ({ ...prev, [type]: value }));
+  };
+
+  const handleDialogChange = (type: BrandType, open: boolean) => {
+    setActiveDialog(open ? type : null);
+    if (!open) {
+      updateSearch(type, '');
+    }
+  };
 
   // Fetch all available brands
   const { data: allOemBrands } = useQuery({
@@ -190,6 +208,31 @@ export function VendorBrandManager({
   const availableEngineBrands = allEngineBrands?.filter((b) => !existingEngineBrandIds.has(b.id)) ?? [];
   const availableProducts = allProducts?.filter((p) => !existingProductIds.has(p.id)) ?? [];
 
+  // Filtered lists based on search
+  const filteredOemBrands = useMemo(() => {
+    const query = searchQueries.oem.toLowerCase().trim();
+    if (!query) return availableOemBrands;
+    return availableOemBrands.filter((b) => b.oem_brand.toLowerCase().includes(query));
+  }, [availableOemBrands, searchQueries.oem]);
+
+  const filteredEppBrands = useMemo(() => {
+    const query = searchQueries.epp.toLowerCase().trim();
+    if (!query) return availableEppBrands;
+    return availableEppBrands.filter((b) => b.oem_brand.toLowerCase().includes(query));
+  }, [availableEppBrands, searchQueries.epp]);
+
+  const filteredEngineBrands = useMemo(() => {
+    const query = searchQueries.engine.toLowerCase().trim();
+    if (!query) return availableEngineBrands;
+    return availableEngineBrands.filter((b) => b.engine_brand.toLowerCase().includes(query));
+  }, [availableEngineBrands, searchQueries.engine]);
+
+  const filteredProducts = useMemo(() => {
+    const query = searchQueries.product.toLowerCase().trim();
+    if (!query) return availableProducts;
+    return availableProducts.filter((p) => p.product.toLowerCase().includes(query));
+  }, [availableProducts, searchQueries.product]);
+
   return (
     <div className="space-y-6">
       {/* OEM Brands */}
@@ -200,7 +243,7 @@ export function VendorBrandManager({
               <Factory className="h-4 w-4 text-secondary" />
               OEM Brands ({oemBrands.length})
             </CardTitle>
-            <Dialog open={activeDialog === 'oem'} onOpenChange={(open) => setActiveDialog(open ? 'oem' : null)}>
+            <Dialog open={activeDialog === 'oem'} onOpenChange={(open) => handleDialogChange('oem', open)}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                   <Plus className="h-4 w-4 mr-1" /> Add
@@ -210,10 +253,19 @@ export function VendorBrandManager({
                 <DialogHeader>
                   <DialogTitle>Add OEM Brands</DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="max-h-[400px]">
-                  {availableOemBrands.length > 0 ? (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search brands..."
+                    value={searchQueries.oem}
+                    onChange={(e) => updateSearch('oem', e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <ScrollArea className="max-h-[350px]">
+                  {filteredOemBrands.length > 0 ? (
                     <div className="space-y-2 p-1">
-                      {availableOemBrands.map((brand) => (
+                      {filteredOemBrands.map((brand) => (
                         <div key={brand.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
                           <span>{brand.oem_brand}</span>
                           <Button
@@ -227,6 +279,8 @@ export function VendorBrandManager({
                         </div>
                       ))}
                     </div>
+                  ) : searchQueries.oem ? (
+                    <p className="text-muted-foreground text-center py-4">No brands match your search</p>
                   ) : (
                     <p className="text-muted-foreground text-center py-4">All OEM brands are already assigned</p>
                   )}
@@ -265,7 +319,7 @@ export function VendorBrandManager({
               <Factory className="h-4 w-4 text-cta" />
               EPP Brands ({eppBrands.length})
             </CardTitle>
-            <Dialog open={activeDialog === 'epp'} onOpenChange={(open) => setActiveDialog(open ? 'epp' : null)}>
+            <Dialog open={activeDialog === 'epp'} onOpenChange={(open) => handleDialogChange('epp', open)}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                   <Plus className="h-4 w-4 mr-1" /> Add
@@ -275,10 +329,19 @@ export function VendorBrandManager({
                 <DialogHeader>
                   <DialogTitle>Add EPP Brands</DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="max-h-[400px]">
-                  {availableEppBrands.length > 0 ? (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search brands..."
+                    value={searchQueries.epp}
+                    onChange={(e) => updateSearch('epp', e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <ScrollArea className="max-h-[350px]">
+                  {filteredEppBrands.length > 0 ? (
                     <div className="space-y-2 p-1">
-                      {availableEppBrands.map((brand) => (
+                      {filteredEppBrands.map((brand) => (
                         <div key={brand.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
                           <span>{brand.oem_brand}</span>
                           <Button
@@ -292,6 +355,8 @@ export function VendorBrandManager({
                         </div>
                       ))}
                     </div>
+                  ) : searchQueries.epp ? (
+                    <p className="text-muted-foreground text-center py-4">No brands match your search</p>
                   ) : (
                     <p className="text-muted-foreground text-center py-4">All brands are already assigned as EPP</p>
                   )}
@@ -330,7 +395,7 @@ export function VendorBrandManager({
               <Wrench className="h-4 w-4 text-primary" />
               Engine Brands ({engineBrands.length})
             </CardTitle>
-            <Dialog open={activeDialog === 'engine'} onOpenChange={(open) => setActiveDialog(open ? 'engine' : null)}>
+            <Dialog open={activeDialog === 'engine'} onOpenChange={(open) => handleDialogChange('engine', open)}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                   <Plus className="h-4 w-4 mr-1" /> Add
@@ -340,10 +405,19 @@ export function VendorBrandManager({
                 <DialogHeader>
                   <DialogTitle>Add Engine Brands</DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="max-h-[400px]">
-                  {availableEngineBrands.length > 0 ? (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search engine brands..."
+                    value={searchQueries.engine}
+                    onChange={(e) => updateSearch('engine', e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <ScrollArea className="max-h-[350px]">
+                  {filteredEngineBrands.length > 0 ? (
                     <div className="space-y-2 p-1">
-                      {availableEngineBrands.map((brand) => (
+                      {filteredEngineBrands.map((brand) => (
                         <EngineBrandAddRow
                           key={brand.id}
                           brand={brand}
@@ -352,6 +426,8 @@ export function VendorBrandManager({
                         />
                       ))}
                     </div>
+                  ) : searchQueries.engine ? (
+                    <p className="text-muted-foreground text-center py-4">No engine brands match your search</p>
                   ) : (
                     <p className="text-muted-foreground text-center py-4">All engine brands are already assigned</p>
                   )}
@@ -405,7 +481,7 @@ export function VendorBrandManager({
               <Package className="h-4 w-4 text-accent" />
               Products ({products.length})
             </CardTitle>
-            <Dialog open={activeDialog === 'product'} onOpenChange={(open) => setActiveDialog(open ? 'product' : null)}>
+            <Dialog open={activeDialog === 'product'} onOpenChange={(open) => handleDialogChange('product', open)}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                   <Plus className="h-4 w-4 mr-1" /> Add
@@ -415,10 +491,19 @@ export function VendorBrandManager({
                 <DialogHeader>
                   <DialogTitle>Add Products</DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="max-h-[400px]">
-                  {availableProducts.length > 0 ? (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search products..."
+                    value={searchQueries.product}
+                    onChange={(e) => updateSearch('product', e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <ScrollArea className="max-h-[350px]">
+                  {filteredProducts.length > 0 ? (
                     <div className="space-y-2 p-1">
-                      {availableProducts.map((product) => (
+                      {filteredProducts.map((product) => (
                         <div key={product.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
                           <span>{product.product}</span>
                           <Button
@@ -432,6 +517,8 @@ export function VendorBrandManager({
                         </div>
                       ))}
                     </div>
+                  ) : searchQueries.product ? (
+                    <p className="text-muted-foreground text-center py-4">No products match your search</p>
                   ) : (
                     <p className="text-muted-foreground text-center py-4">All products are already assigned</p>
                   )}
