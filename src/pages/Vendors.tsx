@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,18 +7,25 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Building2, Phone, Mail, MapPin, FilterX } from 'lucide-react';
+import { Plus, Search, Building2, Phone, Mail, MapPin, FilterX, Pencil, Check, X } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 type OemEppFilter = 'all' | 'oem' | 'epp' | 'both' | 'none';
 
 export default function Vendors() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [preferenceFilter, setPreferenceFilter] = useState<string>('all');
   const [vendorLevelFilter, setVendorLevelFilter] = useState<string>('all');
   const [oemEppFilter, setOemEppFilter] = useState<OemEppFilter>('all');
+
+  // Inline editing state
+  const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
+  const [editedName, setEditedName] = useState('');
 
   const { data: vendors, isLoading } = useQuery({
     queryKey: ['vendors'],
@@ -31,6 +38,56 @@ export default function Vendors() {
       return data ?? [];
     },
   });
+
+  const updateVendorMutation = useMutation({
+    mutationFn: async ({ id, vendor_name }: { id: string; vendor_name: string }) => {
+      const { error } = await supabase
+        .from('vendors')
+        .update({ vendor_name })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+      setEditingVendorId(null);
+      setEditedName('');
+      toast.success('Vendor name updated');
+    },
+    onError: () => {
+      toast.error('Failed to update vendor name');
+    }
+  });
+
+  const startEditing = (e: React.MouseEvent, vendor: { id: string; vendor_name: string }) => {
+    e.stopPropagation();
+    setEditingVendorId(vendor.id);
+    setEditedName(vendor.vendor_name);
+  };
+
+  const handleSave = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (editingVendorId && editedName.trim()) {
+      updateVendorMutation.mutate({ id: editingVendorId, vendor_name: editedName.trim() });
+    }
+  };
+
+  const handleCancel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingVendorId(null);
+    setEditedName('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (editingVendorId && editedName.trim()) {
+        updateVendorMutation.mutate({ id: editingVendorId, vendor_name: editedName.trim() });
+      }
+    } else if (e.key === 'Escape') {
+      setEditingVendorId(null);
+      setEditedName('');
+    }
+  };
 
   const filteredVendors = useMemo(() => {
     return vendors?.filter((vendor) => {
@@ -73,6 +130,8 @@ export default function Vendors() {
 
   const hasActiveFilters = searchTerm || preferenceFilter !== 'all' || vendorLevelFilter !== 'all' || oemEppFilter !== 'all';
 
+  const needsReviewCount = vendors?.filter(v => v.vendor_name === 'UNKNOWN - Needs Review').length ?? 0;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -85,6 +144,17 @@ export default function Vendors() {
           Add Vendor
         </Button>
       </div>
+
+      {needsReviewCount > 0 && (
+        <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 flex items-center gap-2">
+          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 border-yellow-300">
+            {needsReviewCount} vendor{needsReviewCount > 1 ? 's' : ''} need review
+          </Badge>
+          <span className="text-sm text-yellow-700 dark:text-yellow-300">
+            Click the pencil icon to edit vendor names
+          </span>
+        </div>
+      )}
 
       {/* Filters */}
       <Card>
@@ -173,18 +243,65 @@ export default function Vendors() {
                 {filteredVendors.map((vendor) => (
                   <TableRow
                     key={vendor.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/vendors/${vendor.id}`)}
+                    className={cn(
+                      "cursor-pointer hover:bg-muted/50",
+                      vendor.vendor_name === 'UNKNOWN - Needs Review' && "bg-yellow-50 dark:bg-yellow-950/20"
+                    )}
+                    onClick={() => editingVendorId !== vendor.id && navigate(`/vendors/${vendor.id}`)}
                   >
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">{vendor.vendor_name}</p>
-                          {vendor.poc && (
-                            <p className="text-sm text-muted-foreground">POC: {vendor.poc}</p>
-                          )}
-                        </div>
+                        <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        {editingVendorId === vendor.id ? (
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Input
+                              value={editedName}
+                              onChange={(e) => setEditedName(e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              className="h-8 w-56"
+                              autoFocus
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={handleSave}
+                              disabled={updateVendorMutation.isPending}
+                            >
+                              <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={handleCancel}
+                            >
+                              <X className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 group">
+                            <div>
+                              <p className={cn(
+                                "font-medium",
+                                vendor.vendor_name === 'UNKNOWN - Needs Review' && "text-yellow-700 dark:text-yellow-400"
+                              )}>
+                                {vendor.vendor_name}
+                              </p>
+                              {vendor.poc && (
+                                <p className="text-sm text-muted-foreground">POC: {vendor.poc}</p>
+                              )}
+                            </div>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="opacity-0 group-hover:opacity-100 h-6 w-6 transition-opacity"
+                              onClick={(e) => startEditing(e, vendor)}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
