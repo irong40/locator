@@ -13,6 +13,11 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["Source Sans 3", "system-ui", "sans-serif"],
+        heading: ["Montserrat", "system-ui", "sans-serif"],
+        accent: ["Poppins", "system-ui", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -39,6 +44,10 @@ export default {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        cta: {
+          DEFAULT: "hsl(var(--cta))",
+          foreground: "hsl(var(--cta-foreground))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -56,6 +65,27 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+        },
+        // Brand-specific color tokens
+        cobalt: {
+          DEFAULT: "hsl(216, 90%, 37%)",
+          light: "hsl(216, 90%, 50%)",
+          dark: "hsl(216, 90%, 25%)",
+        },
+        teal: {
+          DEFAULT: "hsl(184, 69%, 45%)",
+          light: "hsl(184, 69%, 55%)",
+          dark: "hsl(184, 69%, 35%)",
+        },
+        orange: {
+          DEFAULT: "hsl(31, 89%, 55%)",
+          light: "hsl(31, 89%, 65%)",
+          dark: "hsl(31, 89%, 45%)",
+        },
+        indigo: {
+          DEFAULT: "hsl(236, 67%, 30%)",
+          light: "hsl(236, 67%, 40%)",
+          dark: "hsl(236, 67%, 20%)",
         },
       },
       borderRadius: {
