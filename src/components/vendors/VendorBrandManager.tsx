@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Factory, Wrench, Package, Plus, X, Shield, Loader2, Search } from 'lucide-react';
 
@@ -45,6 +46,7 @@ export function VendorBrandManager({
     engine: '',
     product: '',
   });
+  const [newItemName, setNewItemName] = useState('');
 
   const updateSearch = (type: BrandType, value: string) => {
     setSearchQueries((prev) => ({ ...prev, [type]: value }));
@@ -54,6 +56,7 @@ export function VendorBrandManager({
     setActiveDialog(open ? type : null);
     if (!open) {
       updateSearch(type, '');
+      setNewItemName('');
     }
   };
 
@@ -83,6 +86,51 @@ export function VendorBrandManager({
       if (error) throw error;
       return data ?? [];
     },
+  });
+
+  // Mutations for creating new brands/products
+  const createOemBrand = useMutation({
+    mutationFn: async (name: string) => {
+      const { data, error } = await supabase.from('oem_brands').insert({ oem_brand: name }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['all-oem-brands'] });
+      addOemBrand.mutate(data.id);
+      setNewItemName('');
+      toast({ title: 'OEM brand created and added' });
+    },
+    onError: (error) => toast({ title: 'Error creating OEM brand', description: error.message, variant: 'destructive' }),
+  });
+
+  const createEngineBrand = useMutation({
+    mutationFn: async (name: string) => {
+      const { data, error } = await supabase.from('engine_brands').insert({ engine_brand: name }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['all-engine-brands'] });
+      toast({ title: 'Engine brand created', description: 'You can now add it to the vendor.' });
+      setNewItemName('');
+    },
+    onError: (error) => toast({ title: 'Error creating engine brand', description: error.message, variant: 'destructive' }),
+  });
+
+  const createProduct = useMutation({
+    mutationFn: async (name: string) => {
+      const { data, error } = await supabase.from('products').insert({ product: name }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['all-products'] });
+      addProduct.mutate(data.id);
+      setNewItemName('');
+      toast({ title: 'Product created and added' });
+    },
+    onError: (error) => toast({ title: 'Error creating product', description: error.message, variant: 'destructive' }),
   });
 
   // Mutations for adding/removing associations
@@ -233,6 +281,31 @@ export function VendorBrandManager({
     return availableProducts.filter((p) => p.product.toLowerCase().includes(query));
   }, [availableProducts, searchQueries.product]);
 
+  // Check if exact match exists (to avoid duplicates)
+  const oemBrandExists = allOemBrands?.some((b) => b.oem_brand.toLowerCase() === searchQueries.oem.toLowerCase().trim());
+  const engineBrandExists = allEngineBrands?.some((b) => b.engine_brand.toLowerCase() === searchQueries.engine.toLowerCase().trim());
+  const productExists = allProducts?.some((p) => p.product.toLowerCase() === searchQueries.product.toLowerCase().trim());
+
+  const handleCreateOemBrand = () => {
+    const name = searchQueries.oem.trim();
+    if (name) createOemBrand.mutate(name);
+  };
+
+  const handleCreateEppBrand = () => {
+    const name = searchQueries.epp.trim();
+    if (name) createOemBrand.mutate(name);
+  };
+
+  const handleCreateEngineBrand = () => {
+    const name = searchQueries.engine.trim();
+    if (name) createEngineBrand.mutate(name);
+  };
+
+  const handleCreateProduct = () => {
+    const name = searchQueries.product.trim();
+    if (name) createProduct.mutate(name);
+  };
+
   return (
     <div className="space-y-6">
       {/* OEM Brands */}
@@ -256,13 +329,13 @@ export function VendorBrandManager({
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search brands..."
+                    placeholder="Search or create new brand..."
                     value={searchQueries.oem}
                     onChange={(e) => updateSearch('oem', e.target.value)}
                     className="pl-9"
                   />
                 </div>
-                <ScrollArea className="max-h-[350px]">
+                <ScrollArea className="max-h-[300px]">
                   {filteredOemBrands.length > 0 ? (
                     <div className="space-y-2 p-1">
                       {filteredOemBrands.map((brand) => (
@@ -285,6 +358,21 @@ export function VendorBrandManager({
                     <p className="text-muted-foreground text-center py-4">All OEM brands are already assigned</p>
                   )}
                 </ScrollArea>
+                {searchQueries.oem.trim() && !oemBrandExists && (
+                  <>
+                    <Separator />
+                    <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                      <span className="text-sm">Create "<strong>{searchQueries.oem.trim()}</strong>"</span>
+                      <Button
+                        size="sm"
+                        onClick={handleCreateOemBrand}
+                        disabled={createOemBrand.isPending}
+                      >
+                        {createOemBrand.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4 mr-1" /> Create & Add</>}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </DialogContent>
             </Dialog>
           </div>
@@ -332,13 +420,13 @@ export function VendorBrandManager({
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search brands..."
+                    placeholder="Search or create new brand..."
                     value={searchQueries.epp}
                     onChange={(e) => updateSearch('epp', e.target.value)}
                     className="pl-9"
                   />
                 </div>
-                <ScrollArea className="max-h-[350px]">
+                <ScrollArea className="max-h-[300px]">
                   {filteredEppBrands.length > 0 ? (
                     <div className="space-y-2 p-1">
                       {filteredEppBrands.map((brand) => (
@@ -361,6 +449,21 @@ export function VendorBrandManager({
                     <p className="text-muted-foreground text-center py-4">All brands are already assigned as EPP</p>
                   )}
                 </ScrollArea>
+                {searchQueries.epp.trim() && !oemBrandExists && (
+                  <>
+                    <Separator />
+                    <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                      <span className="text-sm">Create "<strong>{searchQueries.epp.trim()}</strong>"</span>
+                      <Button
+                        size="sm"
+                        onClick={handleCreateEppBrand}
+                        disabled={createOemBrand.isPending}
+                      >
+                        {createOemBrand.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4 mr-1" /> Create & Add</>}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </DialogContent>
             </Dialog>
           </div>
@@ -408,13 +511,13 @@ export function VendorBrandManager({
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search engine brands..."
+                    placeholder="Search or create new engine brand..."
                     value={searchQueries.engine}
                     onChange={(e) => updateSearch('engine', e.target.value)}
                     className="pl-9"
                   />
                 </div>
-                <ScrollArea className="max-h-[350px]">
+                <ScrollArea className="max-h-[300px]">
                   {filteredEngineBrands.length > 0 ? (
                     <div className="space-y-2 p-1">
                       {filteredEngineBrands.map((brand) => (
@@ -432,6 +535,21 @@ export function VendorBrandManager({
                     <p className="text-muted-foreground text-center py-4">All engine brands are already assigned</p>
                   )}
                 </ScrollArea>
+                {searchQueries.engine.trim() && !engineBrandExists && (
+                  <>
+                    <Separator />
+                    <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                      <span className="text-sm">Create "<strong>{searchQueries.engine.trim()}</strong>"</span>
+                      <Button
+                        size="sm"
+                        onClick={handleCreateEngineBrand}
+                        disabled={createEngineBrand.isPending}
+                      >
+                        {createEngineBrand.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4 mr-1" /> Create</>}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </DialogContent>
             </Dialog>
           </div>
@@ -494,13 +612,13 @@ export function VendorBrandManager({
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search products..."
+                    placeholder="Search or create new product..."
                     value={searchQueries.product}
                     onChange={(e) => updateSearch('product', e.target.value)}
                     className="pl-9"
                   />
                 </div>
-                <ScrollArea className="max-h-[350px]">
+                <ScrollArea className="max-h-[300px]">
                   {filteredProducts.length > 0 ? (
                     <div className="space-y-2 p-1">
                       {filteredProducts.map((product) => (
@@ -523,6 +641,21 @@ export function VendorBrandManager({
                     <p className="text-muted-foreground text-center py-4">All products are already assigned</p>
                   )}
                 </ScrollArea>
+                {searchQueries.product.trim() && !productExists && (
+                  <>
+                    <Separator />
+                    <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                      <span className="text-sm">Create "<strong>{searchQueries.product.trim()}</strong>"</span>
+                      <Button
+                        size="sm"
+                        onClick={handleCreateProduct}
+                        disabled={createProduct.isPending}
+                      >
+                        {createProduct.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4 mr-1" /> Create & Add</>}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </DialogContent>
             </Dialog>
           </div>
