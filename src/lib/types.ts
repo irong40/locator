@@ -1,6 +1,9 @@
 // Branded type helper
 type Brand<T, TBrand extends string> = T & { readonly __brand: TBrand };
 
+// Helper to cast strings to branded types
+export const asVendorId = (id: string): VendorId => id as VendorId;
+
 // Branded ID types for type safety
 export type VendorId = Brand<string, 'VendorId'>;
 export type ProductId = Brand<string, 'ProductId'>;
@@ -75,4 +78,19 @@ export type VendorWithRelations = Vendor & {
   epp_brands?: OemBrand[];
   products?: Product[];
   engine_brands?: (EngineBrand & { is_certified: boolean })[];
+};
+
+// User role types
+export type UserRole = 'Admin' | 'Manager' | 'User' | 'Viewer';
+
+export type Profile = {
+  id: string;
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  short_name: string | null;
+  phone_no: string | null;
+  old_laravel_id: number | null;
+  created_at: string;
+  updated_at: string;
 };

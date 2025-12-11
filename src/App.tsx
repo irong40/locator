@@ -11,6 +11,10 @@ import Vendors from './pages/Vendors';
 import VendorDetail from './pages/VendorDetail';
 import VendorCreate from './pages/VendorCreate';
 import VendorSearch from './pages/VendorSearch';
+import OemBrands from './pages/OemBrands';
+import EngineBrands from './pages/EngineBrands';
+import Products from './pages/Products';
+import PaymentTypes from './pages/PaymentTypes';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -74,6 +78,38 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <VendorCreate />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/oem-brands"
+        element={
+          <ProtectedRoute>
+            <OemBrands />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/engine-brands"
+        element={
+          <ProtectedRoute>
+            <EngineBrands />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/products"
+        element={
+          <ProtectedRoute>
+            <Products />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/payment-types"
+        element={
+          <ProtectedRoute>
+            <PaymentTypes />
           </ProtectedRoute>
         }
       />
