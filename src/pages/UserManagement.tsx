@@ -255,7 +255,8 @@ const UserManagement = () => {
     }
   };
 
-  const getFullName = (user: UserWithRole) => {
+  const getFullName = (user: UserWithRole | null) => {
+    if (!user) return 'Unknown';
     if (user.first_name || user.last_name) {
       return `${user.first_name || ''} ${user.last_name || ''}`.trim();
     }
