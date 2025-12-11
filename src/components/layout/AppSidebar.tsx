@@ -1,4 +1,4 @@
-import { Building2, Factory, Package, CreditCard, LayoutDashboard, Wrench, MapPin, Settings, Users, History } from 'lucide-react';
+import { Building2, Factory, Package, CreditCard, LayoutDashboard, Wrench, MapPin, Settings, Users, History, HelpCircle } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import {
@@ -139,6 +139,24 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
+
+        {/* Help - visible to all users */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate(isAdmin ? '/help/admin' : '/help')}
+                  isActive={location.pathname.startsWith('/help')}
+                  className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                  <span>Help Guide</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   );

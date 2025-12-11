@@ -25,6 +25,8 @@ import ResetPassword from './pages/ResetPassword';
 import UserManagement from './pages/UserManagement';
 import AuditLogs from './pages/AuditLogs';
 import DataMigration from './pages/DataMigration';
+import HelpGuideUser from './pages/HelpGuideUser';
+import HelpGuideAdmin from './pages/HelpGuideAdmin';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -177,6 +179,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['Admin']}>
             <DataMigration />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/help"
+        element={
+          <ProtectedRoute>
+            <HelpGuideUser />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/help/admin"
+        element={
+          <ProtectedRoute allowedRoles={['Admin']}>
+            <HelpGuideAdmin />
           </ProtectedRoute>
         }
       />
