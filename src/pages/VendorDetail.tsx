@@ -12,6 +12,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft,
@@ -29,6 +40,7 @@ import {
   Pencil,
   X,
   Save,
+  Trash2,
 } from 'lucide-react';
 import { z } from 'zod';
 
@@ -227,6 +239,28 @@ export default function VendorDetail() {
     },
   });
 
+  const deleteVendor = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('vendors').delete().eq('id', id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+      toast({
+        title: 'Vendor deleted',
+        description: 'The vendor has been deleted successfully.',
+      });
+      navigate('/vendors');
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error deleting vendor',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleSave = () => {
     setErrors({});
     const validation = vendorSchema.safeParse(formData);
@@ -355,10 +389,38 @@ export default function VendorDetail() {
               </Button>
             </div>
           ) : (
-            <Button variant="secondary" onClick={() => setIsEditing(true)}>
-              <Pencil className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
+            <div className="flex gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Vendor</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete <strong>{vendor.vendor_name}</strong>? This action cannot be undone
+                      and will permanently remove the vendor from the system.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => deleteVendor.mutate()}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {deleteVendor.isPending ? 'Deleting...' : 'Delete Vendor'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Button variant="secondary" onClick={() => setIsEditing(true)}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </div>
           )}
         </div>
       </div>
