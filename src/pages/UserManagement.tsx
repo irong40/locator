@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -29,9 +31,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Shield, UserCheck, UserX, Loader2 } from 'lucide-react';
+import { Users, Shield, UserCheck, UserX, Loader2, UserPlus, Mail } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
+import { z } from 'zod';
+
+const inviteSchema = z.object({
+  email: z.string().trim().email('Invalid email address').max(255),
+  firstName: z.string().trim().min(1, 'First name is required').max(100),
+  lastName: z.string().trim().min(1, 'Last name is required').max(100),
+  roleId: z.string().uuid('Please select a role'),
+});
 
 type UserWithRole = {
   id: string;
@@ -50,6 +69,9 @@ const UserManagement = () => {
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [dialogAction, setDialogAction] = useState<'activate' | 'deactivate' | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ email: '', firstName: '', lastName: '', roleId: '' });
+  const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
 
   // Fetch all users with their roles
   const { data: users, isLoading: usersLoading } = useQuery({
@@ -162,8 +184,56 @@ const UserManagement = () => {
     },
   });
 
+  // Send invite mutation
+  const inviteMutation = useMutation({
+    mutationFn: async (formData: typeof inviteForm) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch(
+        'https://zgutgcwzakyceylzwbry.supabase.co/functions/v1/send-invite',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify(formData),
+        }
+      );
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to send invite');
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      toast({ title: 'Invitation Sent', description: 'User will receive an email to set up their account.' });
+      setInviteOpen(false);
+      setInviteForm({ email: '', firstName: '', lastName: '', roleId: '' });
+      setInviteErrors({});
+    },
+    onError: (error) => {
+      toast({ title: 'Invitation Failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const handleRoleChange = (userId: string, roleId: string) => {
     updateRoleMutation.mutate({ userId, roleId });
+  };
+
+  const handleInviteSubmit = () => {
+    const result = inviteSchema.safeParse(inviteForm);
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0]) errors[err.path[0].toString()] = err.message;
+      });
+      setInviteErrors(errors);
+      return;
+    }
+    setInviteErrors({});
+    inviteMutation.mutate(inviteForm);
   };
 
   const handleToggleActive = () => {
@@ -201,14 +271,109 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-heading font-bold text-foreground flex items-center gap-2">
-          <Users className="h-8 w-8" />
-          User Management
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Manage user accounts, roles, and access permissions
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-heading font-bold text-foreground flex items-center gap-2">
+            <Users className="h-8 w-8" />
+            User Management
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage user accounts, roles, and access permissions
+          </p>
+        </div>
+        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite User
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Invite New User</DialogTitle>
+              <DialogDescription>
+                Send an email invitation to add a new user to the system.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    value={inviteForm.firstName}
+                    onChange={(e) => setInviteForm({ ...inviteForm, firstName: e.target.value })}
+                    placeholder="John"
+                  />
+                  {inviteErrors.firstName && (
+                    <p className="text-sm text-destructive">{inviteErrors.firstName}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    value={inviteForm.lastName}
+                    onChange={(e) => setInviteForm({ ...inviteForm, lastName: e.target.value })}
+                    placeholder="Doe"
+                  />
+                  {inviteErrors.lastName && (
+                    <p className="text-sm text-destructive">{inviteErrors.lastName}</p>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={inviteForm.email}
+                  onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                  placeholder="john.doe@example.com"
+                />
+                {inviteErrors.email && (
+                  <p className="text-sm text-destructive">{inviteErrors.email}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Select
+                  value={inviteForm.roleId}
+                  onValueChange={(value) => setInviteForm({ ...inviteForm, roleId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles?.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        <Badge variant={getRoleBadgeVariant(role.role_name)}>
+                          {role.role_name}
+                        </Badge>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {inviteErrors.roleId && (
+                  <p className="text-sm text-destructive">{inviteErrors.roleId}</p>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInviteOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleInviteSubmit} disabled={inviteMutation.isPending}>
+                {inviteMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Mail className="h-4 w-4 mr-2" />
+                )}
+                Send Invitation
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
