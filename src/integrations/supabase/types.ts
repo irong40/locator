@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -272,6 +272,13 @@ export type Database = {
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vendor_engine_brands_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors_limited"
+            referencedColumns: ["id"]
+          },
         ]
       }
       vendor_epp_brands: {
@@ -306,6 +313,13 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_epp_brands_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors_limited"
             referencedColumns: ["id"]
           },
         ]
@@ -344,6 +358,13 @@ export type Database = {
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vendor_oem_brands_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors_limited"
+            referencedColumns: ["id"]
+          },
         ]
       }
       vendor_products: {
@@ -378,6 +399,13 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_products_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors_limited"
             referencedColumns: ["id"]
           },
         ]
@@ -494,7 +522,68 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vendors_limited: {
+        Row: {
+          city: string | null
+          created_at: string | null
+          epp: boolean | null
+          hr_labour_rate: number | null
+          id: string | null
+          latitude: number | null
+          longitude: number | null
+          oem: boolean | null
+          payment_type_id: string | null
+          preference: string | null
+          state: string | null
+          updated_at: string | null
+          vendor_level: string | null
+          vendor_name: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string | null
+          epp?: boolean | null
+          hr_labour_rate?: number | null
+          id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          oem?: boolean | null
+          payment_type_id?: string | null
+          preference?: string | null
+          state?: string | null
+          updated_at?: string | null
+          vendor_level?: string | null
+          vendor_name?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string | null
+          epp?: boolean | null
+          hr_labour_rate?: number | null
+          id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          oem?: boolean | null
+          payment_type_id?: string | null
+          preference?: string | null
+          state?: string | null
+          updated_at?: string | null
+          vendor_level?: string | null
+          vendor_name?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendors_payment_type_id_fkey"
+            columns: ["payment_type_id"]
+            isOneToOne: false
+            referencedRelation: "payment_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_user_full_name: { Args: { _user_id: string }; Returns: string }
