@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useRecoveryRedirect } from '@/hooks/useRecoveryRedirect';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AccessDenied } from '@/components/auth/AccessDenied';
 import type { UserRole } from '@/lib/types';
@@ -27,6 +28,12 @@ import DataMigration from './pages/DataMigration';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
+
+// Component that handles recovery redirect detection
+function RecoveryRedirectHandler() {
+  useRecoveryRedirect();
+  return null;
+}
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -61,10 +68,12 @@ function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
 
 function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+    <>
+      <RecoveryRedirectHandler />
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         path="/dashboard"
         element={
@@ -171,8 +180,9 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   );
 }
 
