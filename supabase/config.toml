@@ -2,3 +2,6 @@ project_id = "zgutgcwzakyceylzwbry"
 
 [functions.send-invite]
 verify_jwt = false
+
+[functions.import-legacy-data]
+verify_jwt = false
