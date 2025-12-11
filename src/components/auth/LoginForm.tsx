@@ -73,19 +73,23 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl">{isLogin ? 'Sign in' : 'Create account'}</CardTitle>
-        <CardDescription>
+    <Card className="w-full max-w-md border-0 shadow-2xl bg-card/95 backdrop-blur-sm">
+      <CardHeader className="space-y-1 pb-6">
+        <CardTitle className="text-2xl font-heading font-bold text-foreground">
+          {isLogin ? 'Welcome Back' : 'Create Account'}
+        </CardTitle>
+        <CardDescription className="text-muted-foreground">
           {isLogin
             ? 'Enter your credentials to access the system'
             : 'Create an account to get started'}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-foreground font-medium">
+              Email
+            </Label>
             <Input
               id="email"
               type="email"
@@ -93,11 +97,14 @@ export function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
+              className="h-11 border-input focus:border-secondary focus:ring-secondary"
             />
             {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-foreground font-medium">
+              Password
+            </Label>
             <Input
               id="password"
               type="password"
@@ -105,18 +112,25 @@ export function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
+              className="h-11 border-input focus:border-secondary focus:ring-secondary"
             />
             {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button 
+            type="submit" 
+            variant="cta" 
+            size="lg"
+            className="w-full mt-2" 
+            disabled={loading}
+          >
             {loading ? 'Loading...' : isLogin ? 'Sign In' : 'Sign Up'}
           </Button>
         </form>
-        <div className="mt-4 text-center text-sm">
+        <div className="mt-6 text-center">
           <button
             type="button"
             onClick={() => setIsLogin(!isLogin)}
-            className="text-primary hover:underline"
+            className="text-sm text-secondary hover:text-secondary/80 font-medium transition-colors"
           >
             {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
           </button>
