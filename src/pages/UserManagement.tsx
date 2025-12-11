@@ -48,7 +48,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Mail, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, UserPlus, Mail, Eye, Pencil, Trash2, UserCheck, UserX } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
 import { z } from 'zod';
 
@@ -72,12 +72,16 @@ type UserWithRole = {
   role_id: string | null;
 };
 
+type DialogActionType = 'activate' | 'deactivate' | 'delete' | null;
+
 const UserManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
-  const [dialogAction, setDialogAction] = useState<'activate' | 'deactivate' | null>(null);
+  const [dialogAction, setDialogAction] = useState<DialogActionType>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewUser, setViewUser] = useState<UserWithRole | null>(null);
   const [editUser, setEditUser] = useState<UserWithRole | null>(null);
   const [editRoleId, setEditRoleId] = useState<string>('');
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -191,6 +195,42 @@ const UserManagement = () => {
     },
   });
 
+  // Permanently delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch(
+        'https://zgutgcwzakyceylzwbry.supabase.co/functions/v1/delete-user',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ userId }),
+        }
+      );
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to delete user');
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      toast({ 
+        title: 'User Deleted', 
+        description: 'The user has been permanently deleted from the system.' 
+      });
+      setDialogAction(null);
+      setSelectedUser(null);
+    },
+    onError: (error) => {
+      toast({ title: 'Delete Failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
   // Send invite mutation
   const inviteMutation = useMutation({
     mutationFn: async (formData: typeof inviteForm) => {
@@ -240,11 +280,16 @@ const UserManagement = () => {
   };
 
   const handleToggleActive = () => {
-    if (!selectedUser || !dialogAction) return;
+    if (!selectedUser || dialogAction !== 'activate' && dialogAction !== 'deactivate') return;
     toggleActiveMutation.mutate({
       userId: selectedUser.user_id,
       isActive: dialogAction === 'activate',
     });
+  };
+
+  const handlePermanentDelete = () => {
+    if (!selectedUser || dialogAction !== 'delete') return;
+    deleteUserMutation.mutate(selectedUser.user_id);
   };
 
   const handleEditClick = (user: UserWithRole) => {
@@ -253,14 +298,39 @@ const UserManagement = () => {
     setEditDialogOpen(true);
   };
 
+  const handleViewClick = (user: UserWithRole) => {
+    setViewUser(user);
+    setViewDialogOpen(true);
+  };
+
   const handleEditSave = () => {
     if (!editUser || !editRoleId) return;
     updateRoleMutation.mutate({ userId: editUser.user_id, roleId: editRoleId });
   };
 
-  const handleDeleteClick = (user: UserWithRole) => {
+  const handleActivateClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setDialogAction('activate');
+  };
+
+  const handleDeactivateClick = (user: UserWithRole) => {
     setSelectedUser(user);
     setDialogAction('deactivate');
+  };
+
+  const handleDeleteClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setDialogAction('delete');
+  };
+
+  // Full name helper
+  const getFullName = (user: UserWithRole) => {
+    const first = user.first_name?.trim();
+    const last = user.last_name?.trim();
+    if (first && last) return `${first} ${last}`;
+    if (last) return last;
+    if (first) return first;
+    return 'No name';
   };
 
   // Abbreviated name: First initial + Last name (e.g., "A Pierce")
@@ -273,6 +343,15 @@ const UserManagement = () => {
     if (last) return last;
     if (first) return first;
     return 'No name';
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
   if (usersLoading) {
@@ -437,26 +516,55 @@ const UserManagement = () => {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
+                    {/* View Button */}
                     <Button
                       variant="outline"
                       size="sm"
                       className="border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                      onClick={() => handleViewClick(user)}
+                      title="View user details"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
+                    {/* Edit Button */}
                     <Button
                       variant="outline"
                       size="sm"
                       className="border-orange-500 text-orange-500 hover:bg-orange-50 hover:text-orange-600"
                       onClick={() => handleEditClick(user)}
+                      title="Edit user role"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
+                    {/* Activate/Deactivate Button */}
+                    {user.is_active ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
+                        onClick={() => handleDeactivateClick(user)}
+                        title="Deactivate user"
+                      >
+                        <UserX className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700"
+                        onClick={() => handleActivateClick(user)}
+                        title="Activate user"
+                      >
+                        <UserCheck className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {/* Delete Button */}
                     <Button
                       variant="outline"
                       size="sm"
                       className="border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600"
                       onClick={() => handleDeleteClick(user)}
+                      title="Permanently delete user"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -467,6 +575,65 @@ const UserManagement = () => {
           </TableBody>
         </Table>
       </div>
+
+      {/* View User Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>User Details</DialogTitle>
+            <DialogDescription>
+              Viewing information for {viewUser ? getFullName(viewUser) : 'this user'}.
+            </DialogDescription>
+          </DialogHeader>
+          {viewUser && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs uppercase">First Name</Label>
+                  <p className="font-medium">{viewUser.first_name || '-'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs uppercase">Last Name</Label>
+                  <p className="font-medium">{viewUser.last_name || '-'}</p>
+                </div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase">Email</Label>
+                <p className="font-medium">{viewUser.email || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase">Phone</Label>
+                <p className="font-medium">{viewUser.phone_no || '-'}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs uppercase">Role</Label>
+                  <p className="font-medium">{viewUser.role_name || 'No role'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs uppercase">Status</Label>
+                  <p className="font-medium">
+                    {viewUser.is_active ? (
+                      <Badge className="bg-green-500 hover:bg-green-500 text-white">Active</Badge>
+                    ) : (
+                      <Badge variant="secondary">Inactive</Badge>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs uppercase">Created</Label>
+                <p className="font-medium">{formatDate(viewUser.created_at)}</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Role Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -506,8 +673,8 @@ const UserManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Deactivate/Activate Confirmation Dialog */}
-      <AlertDialog open={!!dialogAction} onOpenChange={() => setDialogAction(null)}>
+      {/* Activate/Deactivate Confirmation Dialog */}
+      <AlertDialog open={dialogAction === 'activate' || dialogAction === 'deactivate'} onOpenChange={() => setDialogAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -527,6 +694,35 @@ const UserManagement = () => {
             >
               {toggleActiveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               {dialogAction === 'deactivate' ? 'Deactivate' : 'Activate'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Permanent Delete Confirmation Dialog */}
+      <AlertDialog open={dialogAction === 'delete'} onOpenChange={() => setDialogAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">
+              Permanently Delete User?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                This will permanently delete <strong>{selectedUser ? getFullName(selectedUser) : 'this user'}</strong> from the system.
+              </p>
+              <p className="text-destructive font-semibold">
+                ⚠️ This action cannot be undone. All user data will be permanently removed.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePermanentDelete}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deleteUserMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Delete Permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
