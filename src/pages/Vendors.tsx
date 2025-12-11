@@ -14,6 +14,18 @@ import { cn } from '@/lib/utils';
 
 type OemEppFilter = 'all' | 'oem' | 'epp' | 'both' | 'none';
 type ReviewFilter = 'all' | 'needs-review';
+type EditingField = 'name' | 'location' | null;
+
+type EditingState = {
+  vendorId: string;
+  field: EditingField;
+  values: {
+    vendor_name: string;
+    city: string;
+    state: string;
+    zip_code: string;
+  };
+};
 
 export default function Vendors() {
   const navigate = useNavigate();
@@ -26,8 +38,7 @@ export default function Vendors() {
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
 
   // Inline editing state
-  const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
-  const [editedName, setEditedName] = useState('');
+  const [editing, setEditing] = useState<EditingState | null>(null);
 
   const { data: vendors, isLoading } = useQuery({
     queryKey: ['vendors'],
@@ -42,53 +53,79 @@ export default function Vendors() {
   });
 
   const updateVendorMutation = useMutation({
-    mutationFn: async ({ id, vendor_name }: { id: string; vendor_name: string }) => {
+    mutationFn: async (updates: { id: string; vendor_name?: string; city?: string; state?: string; zip_code?: string }) => {
+      const { id, ...fields } = updates;
       const { error } = await supabase
         .from('vendors')
-        .update({ vendor_name })
+        .update(fields)
         .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
-      setEditingVendorId(null);
-      setEditedName('');
-      toast.success('Vendor name updated');
+      setEditing(null);
+      toast.success('Vendor updated');
     },
     onError: () => {
-      toast.error('Failed to update vendor name');
+      toast.error('Failed to update vendor');
     }
   });
 
-  const startEditing = (e: React.MouseEvent, vendor: { id: string; vendor_name: string }) => {
+  const startEditing = (e: React.MouseEvent, vendor: typeof vendors[0], field: EditingField) => {
     e.stopPropagation();
-    setEditingVendorId(vendor.id);
-    setEditedName(vendor.vendor_name);
+    setEditing({
+      vendorId: vendor.id,
+      field,
+      values: {
+        vendor_name: vendor.vendor_name,
+        city: vendor.city ?? '',
+        state: vendor.state ?? '',
+        zip_code: vendor.zip_code ?? '',
+      }
+    });
   };
 
   const handleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (editingVendorId && editedName.trim()) {
-      updateVendorMutation.mutate({ id: editingVendorId, vendor_name: editedName.trim() });
+    if (!editing) return;
+
+    if (editing.field === 'name') {
+      if (editing.values.vendor_name.trim()) {
+        updateVendorMutation.mutate({ 
+          id: editing.vendorId, 
+          vendor_name: editing.values.vendor_name.trim() 
+        });
+      }
+    } else if (editing.field === 'location') {
+      updateVendorMutation.mutate({ 
+        id: editing.vendorId, 
+        city: editing.values.city.trim() || null,
+        state: editing.values.state.trim().toUpperCase() || null,
+        zip_code: editing.values.zip_code.trim() || null,
+      });
     }
   };
 
   const handleCancel = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setEditingVendorId(null);
-    setEditedName('');
+    setEditing(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (editingVendorId && editedName.trim()) {
-        updateVendorMutation.mutate({ id: editingVendorId, vendor_name: editedName.trim() });
-      }
+      handleSave(e as unknown as React.MouseEvent);
     } else if (e.key === 'Escape') {
-      setEditingVendorId(null);
-      setEditedName('');
+      setEditing(null);
     }
+  };
+
+  const updateEditValue = (field: keyof EditingState['values'], value: string) => {
+    if (!editing) return;
+    setEditing({
+      ...editing,
+      values: { ...editing.values, [field]: value }
+    });
   };
 
   const filteredVendors = useMemo(() => {
@@ -137,6 +174,9 @@ export default function Vendors() {
   const hasActiveFilters = searchTerm || preferenceFilter !== 'all' || vendorLevelFilter !== 'all' || oemEppFilter !== 'all' || reviewFilter !== 'all';
 
   const needsReviewCount = vendors?.filter(v => v.vendor_name === 'UNKNOWN - Needs Review').length ?? 0;
+
+  const isEditingVendor = (vendorId: string, field: EditingField) => 
+    editing?.vendorId === vendorId && editing?.field === field;
 
   return (
     <div className="space-y-6">
@@ -263,16 +303,17 @@ export default function Vendors() {
                       "cursor-pointer hover:bg-muted/50",
                       vendor.vendor_name === 'UNKNOWN - Needs Review' && "bg-yellow-50 dark:bg-yellow-950/20"
                     )}
-                    onClick={() => editingVendorId !== vendor.id && navigate(`/vendors/${vendor.id}`)}
+                    onClick={() => !editing && navigate(`/vendors/${vendor.id}`)}
                   >
+                    {/* Vendor Name Cell */}
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        {editingVendorId === vendor.id ? (
+                        {isEditingVendor(vendor.id, 'name') ? (
                           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                             <Input
-                              value={editedName}
-                              onChange={(e) => setEditedName(e.target.value)}
+                              value={editing!.values.vendor_name}
+                              onChange={(e) => updateEditValue('vendor_name', e.target.value)}
                               onKeyDown={handleKeyDown}
                               className="h-8 w-56"
                               autoFocus
@@ -312,7 +353,7 @@ export default function Vendors() {
                               size="icon"
                               variant="ghost"
                               className="opacity-0 group-hover:opacity-100 h-6 w-6 transition-opacity"
-                              onClick={(e) => startEditing(e, vendor)}
+                              onClick={(e) => startEditing(e, vendor, 'name')}
                             >
                               <Pencil className="h-3 w-3" />
                             </Button>
@@ -320,15 +361,76 @@ export default function Vendors() {
                         )}
                       </div>
                     </TableCell>
+
+                    {/* Location Cell */}
                     <TableCell>
-                      <div className="flex items-center gap-1 text-sm">
-                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                        {[vendor.city, vendor.state].filter(Boolean).join(', ') || '-'}
-                        {vendor.zip_code && (
-                          <span className="text-muted-foreground ml-1">({vendor.zip_code})</span>
-                        )}
-                      </div>
+                      {isEditingVendor(vendor.id, 'location') ? (
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex gap-1">
+                            <Input
+                              value={editing!.values.city}
+                              onChange={(e) => updateEditValue('city', e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              placeholder="City"
+                              className="h-8 w-24"
+                              autoFocus
+                            />
+                            <Input
+                              value={editing!.values.state}
+                              onChange={(e) => updateEditValue('state', e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              placeholder="ST"
+                              className="h-8 w-14"
+                              maxLength={2}
+                            />
+                            <Input
+                              value={editing!.values.zip_code}
+                              onChange={(e) => updateEditValue('zip_code', e.target.value)}
+                              onKeyDown={handleKeyDown}
+                              placeholder="Zip"
+                              className="h-8 w-20"
+                              maxLength={10}
+                            />
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={handleSave}
+                            disabled={updateVendorMutation.isPending}
+                          >
+                            <Check className="h-4 w-4 text-green-600" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={handleCancel}
+                          >
+                            <X className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-sm group">
+                          <MapPin className="h-3 w-3 text-muted-foreground" />
+                          <span>
+                            {[vendor.city, vendor.state].filter(Boolean).join(', ') || '-'}
+                            {vendor.zip_code && (
+                              <span className="text-muted-foreground ml-1">({vendor.zip_code})</span>
+                            )}
+                          </span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="opacity-0 group-hover:opacity-100 h-6 w-6 transition-opacity"
+                            onClick={(e) => startEditing(e, vendor, 'location')}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
+
                     <TableCell>
                       <div className="space-y-1 text-sm">
                         {vendor.phone_no && (
