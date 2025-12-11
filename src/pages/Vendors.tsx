@@ -53,7 +53,7 @@ export default function Vendors() {
   });
 
   const updateVendorMutation = useMutation({
-    mutationFn: async (updates: { id: string; vendor_name?: string; city?: string; state?: string; zip_code?: string }) => {
+    mutationFn: async (updates: { id: string; vendor_name?: string; city?: string | null; state?: string | null; zip_code?: string | null; latitude?: number | null; longitude?: number | null }) => {
       const { id, ...fields } = updates;
       const { error } = await supabase
         .from('vendors')
@@ -71,6 +71,48 @@ export default function Vendors() {
     }
   });
 
+  const handleSave = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!editing) return;
+
+    if (editing.field === 'name') {
+      if (editing.values.vendor_name.trim()) {
+        updateVendorMutation.mutate({ 
+          id: editing.vendorId, 
+          vendor_name: editing.values.vendor_name.trim() 
+        });
+      }
+    } else if (editing.field === 'location') {
+      const zipCode = editing.values.zip_code.trim() || null;
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+
+      // Look up coordinates from zipcode_lists if zip code is provided
+      if (zipCode) {
+        const { data: zipData } = await supabase
+          .from('zipcode_lists')
+          .select('latitude, longitude')
+          .eq('zipcode', zipCode)
+          .maybeSingle();
+        
+        if (zipData) {
+          latitude = Number(zipData.latitude);
+          longitude = Number(zipData.longitude);
+          toast.info('Coordinates auto-populated from zip code');
+        }
+      }
+
+      updateVendorMutation.mutate({ 
+        id: editing.vendorId, 
+        city: editing.values.city.trim() || null,
+        state: editing.values.state.trim().toUpperCase() || null,
+        zip_code: zipCode,
+        latitude,
+        longitude,
+      });
+    }
+  };
+
   const startEditing = (e: React.MouseEvent, vendor: typeof vendors[0], field: EditingField) => {
     e.stopPropagation();
     setEditing({
@@ -83,27 +125,6 @@ export default function Vendors() {
         zip_code: vendor.zip_code ?? '',
       }
     });
-  };
-
-  const handleSave = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!editing) return;
-
-    if (editing.field === 'name') {
-      if (editing.values.vendor_name.trim()) {
-        updateVendorMutation.mutate({ 
-          id: editing.vendorId, 
-          vendor_name: editing.values.vendor_name.trim() 
-        });
-      }
-    } else if (editing.field === 'location') {
-      updateVendorMutation.mutate({ 
-        id: editing.vendorId, 
-        city: editing.values.city.trim() || null,
-        state: editing.values.state.trim().toUpperCase() || null,
-        zip_code: editing.values.zip_code.trim() || null,
-      });
-    }
   };
 
   const handleCancel = (e: React.MouseEvent) => {
