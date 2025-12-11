@@ -8,6 +8,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import Index from './pages/Index';
 import Dashboard from './pages/Dashboard';
 import Vendors from './pages/Vendors';
+import VendorSearch from './pages/VendorSearch';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -47,6 +48,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Vendors />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/vendor-search"
+        element={
+          <ProtectedRoute>
+            <VendorSearch />
           </ProtectedRoute>
         }
       />
