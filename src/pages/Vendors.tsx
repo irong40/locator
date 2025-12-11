@@ -451,6 +451,7 @@ export default function Vendors() {
                             className="opacity-0 group-hover:opacity-100 h-6 w-6 transition-opacity"
                             onClick={(e) => startEditing(e, vendor, 'location')}
                           >
+                            <Pencil className="h-3 w-3" />
                           </Button>
                         </div>
                       )}
