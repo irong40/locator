@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Building2, Phone, Mail, MapPin, FilterX, Pencil, Check, X } from 'lucide-react';
+import { Plus, Search, Building2, Phone, Mail, MapPin, FilterX, Pencil, Check, X, AlertTriangle } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -440,13 +440,17 @@ export default function Vendors() {
                               <span className="text-muted-foreground ml-1">({vendor.zip_code})</span>
                             )}
                           </span>
+                          {(!vendor.latitude || !vendor.longitude) && (
+                            <span title="Missing coordinates" className="text-orange-500">
+                              <AlertTriangle className="h-3 w-3" />
+                            </span>
+                          )}
                           <Button
                             size="icon"
                             variant="ghost"
                             className="opacity-0 group-hover:opacity-100 h-6 w-6 transition-opacity"
                             onClick={(e) => startEditing(e, vendor, 'location')}
                           >
-                            <Pencil className="h-3 w-3" />
                           </Button>
                         </div>
                       )}
