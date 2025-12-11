@@ -65,6 +65,30 @@ export type Database = {
         }
         Relationships: []
       }
+      migration_mappings: {
+        Row: {
+          created_at: string | null
+          id: string
+          new_id: string
+          old_id: number
+          source_table: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          new_id: string
+          old_id: number
+          source_table: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          new_id?: string
+          old_id?: number
+          source_table?: string
+        }
+        Relationships: []
+      }
       oem_brands: {
         Row: {
           created_at: string | null
