@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { Resend } from "npm:resend@2.0.0";
 import { 
   corsHeaders, 
   verifyAdminAuth, 
@@ -11,6 +12,9 @@ const ReinviteSchema = z.object({
   userId: z.string().uuid({ message: 'userId must be a valid UUID' }),
   email: z.string().email({ message: 'Invalid email address' }),
 });
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
+const FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") ?? "Locator <no-reply@example.com>";
 
 async function reinviteUserHandler(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
@@ -56,18 +60,39 @@ async function reinviteUserHandler(req: Request): Promise<Response> {
     console.log(`Redirect URL: ${redirectTo}`);
 
     // Use "recovery" type for existing users (resend invite = password reset link)
-    const { error: linkError } = await adminClient.auth.admin.generateLink({
+    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email,
       options: { redirectTo },
     });
 
-    if (linkError) {
+    if (linkError || !linkData) {
       console.error("Generate link error:", linkError);
-      return createErrorResponse(linkError.message, 400);
+      return createErrorResponse(linkError?.message ?? "Failed to generate recovery link", 400);
     }
 
-    console.log(`Invite link generated for ${email}`);
+    // Supabase returns the action link on the properties object for generateLink
+    // @ts-ignore - Deno Supabase admin client returns properties on data
+    const actionLink = (linkData as any).properties?.action_link ?? (linkData as any).action_link;
+
+    if (!actionLink) {
+      console.error("No action_link returned from generateLink", linkData);
+      return createErrorResponse("Failed to generate recovery link", 500);
+    }
+
+    const emailResponse = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [email],
+      subject: "Reset your Locator password",
+      html: `
+        <h2>Reset your password</h2>
+        <p>You requested a new sign-in link. Click the button below to reset your password and access your account.</p>
+        <p><a href="${actionLink}">Reset password</a></p>
+        <p>If you did not request this, you can safely ignore this email.</p>
+      `,
+    });
+
+    console.log("Reinvite email sent:", emailResponse);
 
     return createSuccessResponse({ success: true, userId });
   } catch (error: unknown) {
