@@ -50,21 +50,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus, Mail, Eye, Pencil, Trash2, UserCheck, UserX, RefreshCw } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
-import { z } from 'zod';
-
-const inviteSchema = z.object({
-  email: z.string().trim().email('Invalid email address').max(255),
-  firstName: z.string().trim().min(1, 'First name is required').max(100),
-  lastName: z.string().trim().min(1, 'Last name is required').max(100),
-  roleId: z.string().uuid('Please select a role'),
-});
-
-const profileEditSchema = z.object({
-  firstName: z.string().trim().min(1, 'First name is required').max(100),
-  lastName: z.string().trim().min(1, 'Last name is required').max(100),
-  phone: z.string().trim().max(20).optional(),
-  roleId: z.string().uuid('Please select a role'),
-});
+import { inviteSchema, profileEditSchema } from '@/lib/schemas/user';
 
 type UserWithRole = {
   id: string;
