@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { useUserRole } from '@/hooks/useUserRole';
+import { RoleCapabilitiesCard } from '@/components/help/RoleCapabilitiesCard';
 import { 
   MapPin, 
   Building2, 
@@ -41,6 +42,9 @@ export default function HelpGuideUser() {
             : "Welcome! This guide will help you find and view vendor information."}
         </p>
       </div>
+
+      {/* Role Capabilities Card */}
+      <RoleCapabilitiesCard />
 
       {/* Table of Contents */}
       <Card className="mb-8">

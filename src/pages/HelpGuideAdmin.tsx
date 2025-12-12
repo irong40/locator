@@ -3,6 +3,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserRole } from '@/hooks/useUserRole';
+import { RoleCapabilitiesCard } from '@/components/help/RoleCapabilitiesCard';
 import { 
   MapPin, 
   Building2, 
@@ -50,24 +51,6 @@ export default function HelpGuideAdmin() {
     ? "Complete administrative guide including all system management features."
     : "Guide for managing vendors, catalog items, and viewing system data.";
 
-  // Calculate section numbers dynamically based on visible sections
-  let sectionNum = 1;
-  const getSectionNum = () => sectionNum++;
-
-  // Reset for TOC calculation
-  const tocSections = {
-    gettingStarted: 1,
-    findingVendors: 2,
-    managingVendors: 3,
-    profile: 4,
-    account: 5,
-    dashboard: isAdmin || isManager ? 6 : null,
-    userManagement: isAdmin ? 7 : null,
-    catalogManagement: isAdmin || isManager ? (isAdmin ? 8 : 7) : null,
-    auditLogs: isAdmin ? 9 : null,
-    dataMigration: isAdmin ? 10 : null,
-  };
-
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
       <div className="mb-8">
@@ -79,6 +62,9 @@ export default function HelpGuideAdmin() {
         </div>
         <p className="text-muted-foreground">{roleDescription}</p>
       </div>
+
+      {/* Role Capabilities Card */}
+      <RoleCapabilitiesCard />
 
       {/* Table of Contents */}
       <Card className="mb-8">
