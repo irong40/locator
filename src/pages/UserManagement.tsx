@@ -59,6 +59,13 @@ const inviteSchema = z.object({
   roleId: z.string().uuid('Please select a role'),
 });
 
+const profileEditSchema = z.object({
+  firstName: z.string().trim().min(1, 'First name is required').max(100),
+  lastName: z.string().trim().min(1, 'Last name is required').max(100),
+  phone: z.string().trim().max(20).optional(),
+  roleId: z.string().uuid('Please select a role'),
+});
+
 type UserWithRole = {
   id: string;
   user_id: string;
@@ -84,6 +91,10 @@ const UserManagement = () => {
   const [viewUser, setViewUser] = useState<UserWithRole | null>(null);
   const [editUser, setEditUser] = useState<UserWithRole | null>(null);
   const [editRoleId, setEditRoleId] = useState<string>('');
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: '', firstName: '', lastName: '', roleId: '' });
   const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
@@ -137,9 +148,34 @@ const UserManagement = () => {
     },
   });
 
-  // Update user role mutation
-  const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, roleId }: { userId: string; roleId: string }) => {
+  // Update user profile and role mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async ({ 
+      userId, 
+      firstName, 
+      lastName, 
+      phone, 
+      roleId 
+    }: { 
+      userId: string; 
+      firstName: string; 
+      lastName: string; 
+      phone: string; 
+      roleId: string;
+    }) => {
+      // Update profile fields
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          phone_no: phone.trim() || null,
+        })
+        .eq('user_id', userId);
+
+      if (profileError) throw profileError;
+
+      // Update role
       const { data: existing } = await supabase
         .from('user_role_assignments')
         .select('id')
@@ -161,9 +197,10 @@ const UserManagement = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({ title: 'Role updated', description: 'User role has been changed.' });
+      toast({ title: 'User Updated', description: 'Profile and role have been saved.' });
       setEditDialogOpen(false);
       setEditUser(null);
+      setEditErrors({});
     },
     onError: (error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -326,7 +363,11 @@ const UserManagement = () => {
 
   const handleEditClick = (user: UserWithRole) => {
     setEditUser(user);
+    setEditFirstName(user.first_name || '');
+    setEditLastName(user.last_name || '');
+    setEditPhone(user.phone_no || '');
     setEditRoleId(user.role_id || '');
+    setEditErrors({});
     setEditDialogOpen(true);
   };
 
@@ -336,8 +377,32 @@ const UserManagement = () => {
   };
 
   const handleEditSave = () => {
-    if (!editUser || !editRoleId) return;
-    updateRoleMutation.mutate({ userId: editUser.user_id, roleId: editRoleId });
+    if (!editUser) return;
+
+    const result = profileEditSchema.safeParse({
+      firstName: editFirstName,
+      lastName: editLastName,
+      phone: editPhone,
+      roleId: editRoleId,
+    });
+
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0]) errors[err.path[0].toString()] = err.message;
+      });
+      setEditErrors(errors);
+      return;
+    }
+
+    setEditErrors({});
+    updateProfileMutation.mutate({
+      userId: editUser.user_id,
+      firstName: editFirstName,
+      lastName: editLastName,
+      phone: editPhone,
+      roleId: editRoleId,
+    });
   };
 
   const handleActivateClick = (user: UserWithRole) => {
@@ -692,16 +757,55 @@ const UserManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Role Dialog */}
+      {/* Edit User Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit User Role</DialogTitle>
+            <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
-              Change the role for {editUser ? getAbbreviatedName(editUser) : 'this user'}.
+              Update profile information and role for {editUser ? editUser.email : 'this user'}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editFirstName">First Name</Label>
+                <Input
+                  id="editFirstName"
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                  placeholder="First name"
+                />
+                {editErrors.firstName && (
+                  <p className="text-sm text-destructive">{editErrors.firstName}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editLastName">Last Name</Label>
+                <Input
+                  id="editLastName"
+                  value={editLastName}
+                  onChange={(e) => setEditLastName(e.target.value)}
+                  placeholder="Last name"
+                />
+                {editErrors.lastName && (
+                  <p className="text-sm text-destructive">{editErrors.lastName}</p>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editPhone">Phone Number</Label>
+              <Input
+                id="editPhone"
+                type="tel"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                placeholder="Phone number (optional)"
+              />
+              {editErrors.phone && (
+                <p className="text-sm text-destructive">{editErrors.phone}</p>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="editRole">Role</Label>
               <Select value={editRoleId} onValueChange={setEditRoleId}>
@@ -716,14 +820,17 @@ const UserManagement = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {editErrors.roleId && (
+                <p className="text-sm text-destructive">{editErrors.roleId}</p>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEditSave} disabled={updateRoleMutation.isPending}>
-              {updateRoleMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            <Button onClick={handleEditSave} disabled={updateProfileMutation.isPending}>
+              {updateProfileMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Save Changes
             </Button>
           </DialogFooter>
