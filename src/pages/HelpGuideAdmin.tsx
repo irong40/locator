@@ -1,6 +1,8 @@
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserRole } from '@/hooks/useUserRole';
 import { RoleCapabilitiesCard } from '@/components/help/RoleCapabilitiesCard';
@@ -29,7 +31,8 @@ import {
   UserX,
   AlertTriangle,
   Database,
-  Pencil
+  Pencil,
+  ArrowLeft
 } from 'lucide-react';
 
 export default function HelpGuideAdmin() {
@@ -54,11 +57,18 @@ export default function HelpGuideAdmin() {
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
       <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <h1 className="text-3xl font-heading font-bold text-foreground">
-            {isAdmin ? 'Admin' : 'Manager'} Help Guide
-          </h1>
-          <Badge className="bg-primary">{roleBadge}</Badge>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-heading font-bold text-foreground">
+              {isAdmin ? 'Admin' : 'Manager'} Help Guide
+            </h1>
+            <Badge className="bg-primary">{roleBadge}</Badge>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/help/user">
+              <ArrowLeft className="mr-2 h-4 w-4" /> User Guide
+            </Link>
+          </Button>
         </div>
         <p className="text-muted-foreground">{roleDescription}</p>
       </div>

@@ -1,6 +1,8 @@
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useUserRole } from '@/hooks/useUserRole';
 import { RoleCapabilitiesCard } from '@/components/help/RoleCapabilitiesCard';
 import { 
@@ -15,11 +17,12 @@ import {
   Wrench,
   Factory,
   Pencil,
-  Package
+  Package,
+  ArrowRight
 } from 'lucide-react';
 
 export default function HelpGuideUser() {
-  const { canEdit, isLoading } = useUserRole();
+  const { canEdit, isAdmin, isManager, isLoading } = useUserRole();
 
   if (isLoading) {
     return (
@@ -32,10 +35,21 @@ export default function HelpGuideUser() {
     );
   }
 
+  const canViewAdminGuide = isAdmin || isManager;
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-heading font-bold text-foreground mb-2">Help Guide</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-3xl font-heading font-bold text-foreground">Help Guide</h1>
+          {canViewAdminGuide && (
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/help/admin">
+                Admin Guide <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          )}
+        </div>
         <p className="text-muted-foreground">
           {canEdit 
             ? "Welcome! This guide will help you find vendors, view details, and edit vendor information."
