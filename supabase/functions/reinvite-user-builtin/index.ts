@@ -52,8 +52,7 @@ async function reinviteUserHandler(req: Request): Promise<Response> {
       return createErrorResponse("Email does not match user ID", 400);
     }
 
-    const origin = req.headers.get("origin") || "https://lovable.dev";
-    const redirectTo = `${origin}/reset-password`;
+    const redirectTo = "https://locator.dradamopierce.com/reset-password";
     console.log(`Redirect URL: ${redirectTo}`);
 
     // Use "recovery" type for existing users (resend invite = password reset link)
