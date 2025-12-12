@@ -47,8 +47,8 @@ export function AppSidebar() {
             />
           </div>
           <div>
-            <h2 className="font-heading font-semibold text-sidebar-foreground">C&R Repair</h2>
-            <p className="text-xs text-sidebar-primary">Vendor Management</p>
+            <h2 className="font-heading font-semibold text-sidebar-foreground">C&R Repair Solutions</h2>
+            <p className="text-xs text-sidebar-primary">Vendor Locator</p>
           </div>
         </div>
         {role && (
