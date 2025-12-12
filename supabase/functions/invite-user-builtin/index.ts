@@ -81,6 +81,20 @@ const handler = async (req: Request): Promise<Response> => {
     const { email, firstName, lastName, roleId } = parseResult.data;
     console.log(`Inviting user: ${email} with role: ${roleId}`);
 
+    // Check if user already exists
+    const { data: existingUsers } = await supabaseClient.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+    
+    if (existingUser) {
+      console.log(`User ${email} already exists with id: ${existingUser.id}`);
+      return new Response(
+        JSON.stringify({ 
+          error: "This email is already registered. Use 'Resend Invite' to send a new invitation link." 
+        }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     // Get the redirect URL from request origin or use default
     const origin = req.headers.get("origin") || "https://lovable.dev";
     const redirectTo = `${origin}/reset-password`;
