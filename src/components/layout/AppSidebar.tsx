@@ -46,13 +46,13 @@ export function AppSidebar() {
               className="h-full w-full object-cover"
             />
           </div>
-          <div>
-            <h2 className="font-heading font-semibold text-sidebar-foreground">C&R Repair Solutions</h2>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-heading font-semibold text-sidebar-foreground text-sm leading-tight">C&R Repair Solutions</h2>
             <p className="text-xs text-sidebar-primary">Vendor Locator</p>
           </div>
         </div>
         {role && (
-          <Badge variant="outline" className="mt-2 text-xs">
+          <Badge variant="outline" className="mt-2 text-xs border-sidebar-border text-sidebar-foreground bg-sidebar-accent/50">
             {role}
           </Badge>
         )}
