@@ -38,47 +38,59 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="flex items-center gap-2 px-2">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+        <Button 
+          variant="ghost" 
+          className="flex items-center gap-3 px-3 py-2 h-auto hover:bg-accent/50 transition-colors"
+        >
+          <Avatar className="h-9 w-9 ring-2 ring-border">
+            <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
               {getInitials()}
             </AvatarFallback>
           </Avatar>
-          <div className="hidden sm:flex flex-col items-start">
-            <span className="text-sm font-medium text-foreground truncate max-w-[150px]">
-              {user.email}
-            </span>
+          {role && (
+            <Badge 
+              variant={getRoleBadgeVariant(role)} 
+              className="hidden sm:flex text-xs h-6 px-2 gap-1"
+            >
+              <Shield className="h-3 w-3" />
+              {role}
+            </Badge>
+          )}
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64">
+        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-t-md">
+          <Avatar className="h-12 w-12 ring-2 ring-border">
+            <AvatarFallback className="bg-primary text-primary-foreground text-base font-semibold">
+              {getInitials()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col gap-1 min-w-0">
+            <p className="text-sm font-medium truncate">{user.email}</p>
             {role && (
-              <Badge variant={getRoleBadgeVariant(role)} className="text-xs h-5 px-1.5">
-                <Shield className="h-3 w-3 mr-1" />
+              <Badge 
+                variant={getRoleBadgeVariant(role)} 
+                className="w-fit text-xs h-5 px-2 gap-1"
+              >
+                <Shield className="h-3 w-3" />
                 {role}
               </Badge>
             )}
           </div>
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium">{user.email}</p>
-            {role && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Shield className="h-3 w-3" />
-                {role}
-              </p>
-            )}
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link to="/profile" className="cursor-pointer">
+        </div>
+        <DropdownMenuSeparator className="my-1" />
+        <DropdownMenuItem asChild className="py-2.5 px-3 cursor-pointer">
+          <Link to="/profile">
             <User className="h-4 w-4 mr-2" />
             Profile
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive focus:text-destructive">
+        <DropdownMenuSeparator className="my-1" />
+        <DropdownMenuItem 
+          onClick={signOut} 
+          className="py-2.5 px-3 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+        >
           <LogOut className="h-4 w-4 mr-2" />
           Sign Out
         </DropdownMenuItem>
