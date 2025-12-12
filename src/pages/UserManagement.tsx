@@ -255,7 +255,7 @@ const UserManagement = () => {
       if (!session) throw new Error('Not authenticated');
 
       const response = await fetch(
-        'https://zgutgcwzakyceylzwbry.supabase.co/functions/v1/send-invite',
+        'https://zgutgcwzakyceylzwbry.supabase.co/functions/v1/invite-user-builtin',
         {
           method: 'POST',
           headers: {
@@ -289,7 +289,7 @@ const UserManagement = () => {
       if (!session) throw new Error('Not authenticated');
 
       const response = await fetch(
-        'https://zgutgcwzakyceylzwbry.supabase.co/functions/v1/resend-invite',
+        'https://zgutgcwzakyceylzwbry.supabase.co/functions/v1/reinvite-user-builtin',
         {
           method: 'POST',
           headers: {

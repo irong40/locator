@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { Resend } from "npm:resend@2.0.0";
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +28,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Verify the requesting user is an admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.error("No authorization header provided");
       return new Response(
         JSON.stringify({ error: "No authorization header" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -83,121 +81,59 @@ const handler = async (req: Request): Promise<Response> => {
     const { email, firstName, lastName, roleId } = parseResult.data;
     console.log(`Inviting user: ${email} with role: ${roleId}`);
 
-    // Create user with a random password (they'll reset it)
-    const tempPassword = crypto.randomUUID();
-    const { data: newUser, error: createError } = await supabaseClient.auth.admin.createUser({
-      email,
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: {
+    // Get the redirect URL from request origin or use default
+    const origin = req.headers.get("origin") || "https://lovable.dev";
+    const redirectTo = `${origin}/reset-password`;
+    console.log(`Redirect URL: ${redirectTo}`);
+
+    // Use Supabase's built-in inviteUserByEmail
+    const { data: inviteData, error: inviteError } = await supabaseClient.auth.admin.inviteUserByEmail(email, {
+      data: {
         first_name: firstName,
         last_name: lastName,
       },
+      redirectTo,
     });
 
-    if (createError) {
-      console.error("Create user error:", createError);
+    if (inviteError) {
+      console.error("Invite user error:", inviteError);
       return new Response(
-        JSON.stringify({ error: createError.message }),
+        JSON.stringify({ error: inviteError.message }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    console.log(`User created: ${newUser.user.id}`);
+    console.log(`User invited: ${inviteData.user.id}`);
 
     // Assign role - delete any existing first (shouldn't exist for new user, but be safe)
     await supabaseClient
       .from("user_role_assignments")
       .delete()
-      .eq("user_id", newUser.user.id);
+      .eq("user_id", inviteData.user.id);
 
     const { error: assignError } = await supabaseClient
       .from("user_role_assignments")
       .insert({
-        user_id: newUser.user.id,
+        user_id: inviteData.user.id,
         role_id: roleId,
       });
 
     if (assignError) {
       console.error("Role assignment error:", assignError);
       // Continue anyway, role can be assigned manually
+    } else {
+      console.log(`Role ${roleId} assigned to user ${inviteData.user.id}`);
     }
-
-    // Generate password reset link
-    const { data: resetData, error: resetError } = await supabaseClient.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: {
-        redirectTo: `${req.headers.get("origin") || "https://lovable.dev"}/reset-password`,
-      },
-    });
-
-    if (resetError) {
-      console.error("Reset link error:", resetError);
-      return new Response(
-        JSON.stringify({ error: "Failed to generate invitation link" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    const inviteLink = resetData.properties.action_link;
-    console.log(`Generated invite link for ${email}`);
-
-    // Send invitation email using configured from address
-    const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "C&R Repair <onboarding@resend.dev>";
-    console.log(`Sending invite email from: ${fromEmail} to: ${email}`);
-    
-    const emailResponse = await resend.emails.send({
-      from: fromEmail,
-      to: [email],
-      subject: "You've been invited to C&R Repair Vendor Management",
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to C&R Repair</h1>
-          </div>
-          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none;">
-            <p style="font-size: 16px;">Hi ${firstName || "there"},</p>
-            <p style="font-size: 16px;">You've been invited to join the C&R Repair Vendor Management system.</p>
-            <p style="font-size: 16px;">Click the button below to set up your password and access your account:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${inviteLink}" style="background: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Set Up Your Account</a>
-            </div>
-            <p style="font-size: 14px; color: #6b7280;">This link will expire in 24 hours. If you didn't expect this invitation, you can safely ignore this email.</p>
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-            <p style="font-size: 12px; color: #9ca3af; text-align: center;">C&R Repair - Vendor Management System</p>
-          </div>
-        </body>
-        </html>
-      `,
-    });
-
-    // Check for email sending errors
-    if (emailResponse.error) {
-      console.error("Resend email error:", emailResponse.error);
-      return new Response(
-        JSON.stringify({ error: `Failed to send invitation email: ${emailResponse.error.message}` }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    console.log("Email sent successfully:", emailResponse.data);
 
     return new Response(
-      JSON.stringify({ success: true, userId: newUser.user.id }),
+      JSON.stringify({ success: true, userId: inviteData.user.id }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
   } catch (error: any) {
-    console.error("Error in send-invite function:", error);
+    console.error("Error in invite-user-builtin function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

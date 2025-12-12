@@ -1,9 +1,9 @@
 project_id = "zgutgcwzakyceylzwbry"
 
-[functions.send-invite]
+[functions.invite-user-builtin]
 verify_jwt = false
 
-[functions.resend-invite]
+[functions.reinvite-user-builtin]
 verify_jwt = false
 
 [functions.import-legacy-data]
