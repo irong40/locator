@@ -228,28 +228,27 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {distributionData.preference.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
                   <Pie
                     data={distributionData.preference}
                     cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
+                    cy="40%"
+                    innerRadius={40}
+                    outerRadius={65}
                     paddingAngle={2}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
                   >
                     {distributionData.preference.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+              <div className="h-[240px] flex items-center justify-center text-muted-foreground">
                 No data available
               </div>
             )}
@@ -267,28 +266,27 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {distributionData.level.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
                   <Pie
                     data={distributionData.level}
                     cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
+                    cy="40%"
+                    innerRadius={40}
+                    outerRadius={65}
                     paddingAngle={2}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
                   >
                     {distributionData.level.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+              <div className="h-[240px] flex items-center justify-center text-muted-foreground">
                 No data available
               </div>
             )}
@@ -306,18 +304,16 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {distributionData.oemEpp.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
                   <Pie
                     data={distributionData.oemEpp}
                     cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
+                    cy="40%"
+                    innerRadius={40}
+                    outerRadius={65}
                     paddingAngle={2}
                     dataKey="value"
-                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
                   >
                     {distributionData.oemEpp.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -328,7 +324,7 @@ export default function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+              <div className="h-[240px] flex items-center justify-center text-muted-foreground">
                 No data available
               </div>
             )}
