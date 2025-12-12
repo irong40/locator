@@ -161,25 +161,19 @@ const UserManagement = () => {
 
       if (profileError) throw profileError;
 
-      // Update role
-      const { data: existing } = await supabase
+      // Update role using delete + insert pattern for reliability
+      // First delete any existing role assignment
+      await supabase
         .from('user_role_assignments')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .delete()
+        .eq('user_id', userId);
 
-      if (existing) {
-        const { error } = await supabase
-          .from('user_role_assignments')
-          .update({ role_id: roleId })
-          .eq('user_id', userId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('user_role_assignments')
-          .insert({ user_id: userId, role_id: roleId });
-        if (error) throw error;
-      }
+      // Then insert the new role
+      const { error: roleError } = await supabase
+        .from('user_role_assignments')
+        .insert({ user_id: userId, role_id: roleId });
+      
+      if (roleError) throw roleError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });

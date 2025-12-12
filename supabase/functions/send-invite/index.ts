@@ -105,7 +105,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`User created: ${newUser.user.id}`);
 
-    // Assign role
+    // Assign role - delete any existing first (shouldn't exist for new user, but be safe)
+    await supabaseClient
+      .from("user_role_assignments")
+      .delete()
+      .eq("user_id", newUser.user.id);
+
     const { error: assignError } = await supabaseClient
       .from("user_role_assignments")
       .insert({
