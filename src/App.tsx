@@ -27,6 +27,7 @@ import AuditLogs from './pages/AuditLogs';
 import DataMigration from './pages/DataMigration';
 import HelpGuideUser from './pages/HelpGuideUser';
 import HelpGuideAdmin from './pages/HelpGuideAdmin';
+import { HelpRedirect } from './components/help/HelpRedirect';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -186,6 +187,14 @@ function AppRoutes() {
         path="/help"
         element={
           <ProtectedRoute>
+            <HelpRedirect />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/help/user"
+        element={
+          <ProtectedRoute>
             <HelpGuideUser />
           </ProtectedRoute>
         }
@@ -193,7 +202,7 @@ function AppRoutes() {
       <Route
         path="/help/admin"
         element={
-          <ProtectedRoute allowedRoles={['Admin']}>
+          <ProtectedRoute allowedRoles={['Admin', 'Manager']}>
             <HelpGuideAdmin />
           </ProtectedRoute>
         }
