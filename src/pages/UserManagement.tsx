@@ -48,7 +48,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Mail, Eye, Pencil, Trash2, UserCheck, UserX } from 'lucide-react';
+import { Loader2, UserPlus, Mail, Eye, Pencil, Trash2, UserCheck, UserX, RefreshCw } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
 import { z } from 'zod';
 
@@ -72,7 +72,7 @@ type UserWithRole = {
   role_id: string | null;
 };
 
-type DialogActionType = 'activate' | 'deactivate' | 'delete' | null;
+type DialogActionType = 'activate' | 'deactivate' | 'delete' | 'resend-invite' | null;
 
 const UserManagement = () => {
   const { toast } = useToast();
@@ -265,6 +265,38 @@ const UserManagement = () => {
     },
   });
 
+  // Resend invite mutation
+  const resendInviteMutation = useMutation({
+    mutationFn: async ({ userId, email, firstName }: { userId: string; email: string; firstName?: string }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch(
+        'https://zgutgcwzakyceylzwbry.supabase.co/functions/v1/resend-invite',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ userId, email, firstName }),
+        }
+      );
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to resend invite');
+      return result;
+    },
+    onSuccess: () => {
+      toast({ title: 'Invitation Resent', description: 'User will receive a new email to set up their account.' });
+      setDialogAction(null);
+      setSelectedUser(null);
+    },
+    onError: (error) => {
+      toast({ title: 'Resend Failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const handleInviteSubmit = () => {
     const result = inviteSchema.safeParse(inviteForm);
     if (!result.success) {
@@ -321,6 +353,20 @@ const UserManagement = () => {
   const handleDeleteClick = (user: UserWithRole) => {
     setSelectedUser(user);
     setDialogAction('delete');
+  };
+
+  const handleResendInviteClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setDialogAction('resend-invite');
+  };
+
+  const handleResendInvite = () => {
+    if (!selectedUser || dialogAction !== 'resend-invite') return;
+    resendInviteMutation.mutate({
+      userId: selectedUser.user_id,
+      email: selectedUser.email || '',
+      firstName: selectedUser.first_name || undefined,
+    });
   };
 
   // Full name helper
@@ -536,6 +582,17 @@ const UserManagement = () => {
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
+                    {/* Resend Invite Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-purple-500 text-purple-500 hover:bg-purple-50 hover:text-purple-600"
+                      onClick={() => handleResendInviteClick(user)}
+                      title="Resend invitation email"
+                      disabled={!user.email}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
                     {/* Activate/Deactivate Button */}
                     {user.is_active ? (
                       <Button
@@ -723,6 +780,27 @@ const UserManagement = () => {
             >
               {deleteUserMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Resend Invite Confirmation Dialog */}
+      <AlertDialog open={dialogAction === 'resend-invite'} onOpenChange={() => setDialogAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Resend Invitation?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will send a new invitation email to <strong>{selectedUser?.email}</strong> with a link to set up their password.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResendInvite}>
+              {resendInviteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Resend Invitation
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
