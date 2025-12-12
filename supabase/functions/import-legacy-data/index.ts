@@ -1,15 +1,34 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface ImportRequest {
-  table: string;
-  data: Record<string, unknown>[];
-}
+// Valid table names for import
+const validTables = [
+  'engine_brands',
+  'oem_brands', 
+  'products',
+  'payment_types',
+  'zipcode_lists',
+  'vendors',
+  'vendor_engine_brands',
+  'vendor_oem_brands',
+  'vendor_epp_brands',
+  'vendor_products',
+  'users',
+] as const;
+
+// Zod schema for request validation
+const ImportRequestSchema = z.object({
+  table: z.enum(validTables, { 
+    errorMap: () => ({ message: `Invalid table. Must be one of: ${validTables.join(', ')}` }) 
+  }),
+  data: z.array(z.record(z.unknown())).min(1, { message: 'Data array cannot be empty' }).max(10000, { message: 'Data array cannot exceed 10000 records' }),
+});
 
 // Save mappings to database
 async function saveMappings(supabase: any, sourceTable: string, mappings: Record<number, string>) {
@@ -112,8 +131,20 @@ serve(async (req) => {
       });
     }
 
-    const { table, data }: ImportRequest = await req.json();
+    // Parse and validate request body
+    const rawBody = await req.json();
+    const parseResult = ImportRequestSchema.safeParse(rawBody);
     
+    if (!parseResult.success) {
+      const errors = parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      console.error('Validation error:', errors);
+      return new Response(
+        JSON.stringify({ error: `Validation failed: ${errors}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { table, data } = parseResult.data;
     console.log(`Importing ${data.length} records into ${table}`);
 
     // Check if this table already has mappings (prevent re-import)
@@ -502,66 +533,58 @@ async function importUsers(supabase: any, data: any[], mappings: Record<string, 
   let inserted = 0;
   const errors: string[] = [];
 
-  // Get role IDs
+  // Get role mappings
   const { data: roles } = await supabase.from('user_roles').select('id, role_name');
   const roleMap: Record<string, string> = {};
-  roles?.forEach((r: any) => { roleMap[r.role_name] = r.id; });
+  roles?.forEach((r: any) => {
+    roleMap[r.role_name.toLowerCase()] = r.id;
+  });
 
   for (const row of data) {
-    try {
-      // Create user in Supabase Auth with existing password hash
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: row.email,
-        password_hash: row.password, // Laravel bcrypt hash
-        email_confirm: true,
-        user_metadata: {
-          first_name: row.name?.split(' ')[0] || '',
-          last_name: row.name?.split(' ').slice(1).join(' ') || '',
-        },
+    // Create user in auth
+    const tempPassword = crypto.randomUUID();
+    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+      email: row.email,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: {
+        first_name: row.first_name || '',
+        last_name: row.last_name || '',
+      },
+    });
+
+    if (createError) {
+      errors.push(`User ${row.id} (${row.email}): ${createError.message}`);
+      continue;
+    }
+
+    // Map role name to role id
+    const roleName = row.role_name?.toLowerCase() || 'user';
+    const roleId = roleMap[roleName] || roleMap['user'];
+
+    if (roleId) {
+      const { error: roleError } = await supabase.from('user_role_assignments').insert({
+        user_id: newUser.user.id,
+        role_id: roleId,
       });
 
-      if (authError) {
-        // Try without password hash if it fails
-        const { data: authData2, error: authError2 } = await supabase.auth.admin.createUser({
-          email: row.email,
-          email_confirm: true,
-          user_metadata: {
-            first_name: row.name?.split(' ')[0] || '',
-            last_name: row.name?.split(' ').slice(1).join(' ') || '',
-          },
-        });
-
-        if (authError2) {
-          errors.push(`User ${row.id} (${row.email}): ${authError2.message}`);
-          continue;
-        }
-
-        userMappings[row.id] = authData2.user.id;
-
-        // Send password reset email
-        await supabase.auth.admin.generateLink({
-          type: 'recovery',
-          email: row.email,
-        });
-      } else {
-        userMappings[row.id] = authData.user.id;
+      if (roleError) {
+        console.error(`Error assigning role for user ${row.email}:`, roleError.message);
       }
-
-      // Assign role based on old user_role_id (1=Admin, 2=User)
-      const roleName = row.user_role_id === 1 || row.user_role_id === '1' ? 'Admin' : 'User';
-      const roleId = roleMap[roleName];
-
-      if (roleId) {
-        await supabase.from('user_role_assignments').insert({
-          user_id: userMappings[row.id],
-          role_id: roleId,
-        });
-      }
-
-      inserted++;
-    } catch (err: any) {
-      errors.push(`User ${row.id} (${row.email}): ${err.message}`);
     }
+
+    // Update profile with old_laravel_id
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ old_laravel_id: row.id })
+      .eq('user_id', newUser.user.id);
+
+    if (profileError) {
+      console.error(`Error updating profile for user ${row.email}:`, profileError.message);
+    }
+
+    userMappings[row.id] = newUser.user.id;
+    inserted++;
   }
 
   return { table: 'users', inserted, errors, mappings: userMappings };
