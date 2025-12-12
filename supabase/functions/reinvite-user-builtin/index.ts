@@ -56,8 +56,9 @@ async function reinviteUserHandler(req: Request): Promise<Response> {
     const redirectTo = `${origin}/reset-password`;
     console.log(`Redirect URL: ${redirectTo}`);
 
+    // Use "recovery" type for existing users (resend invite = password reset link)
     const { error: linkError } = await adminClient.auth.admin.generateLink({
-      type: "invite",
+      type: "recovery",
       email,
       options: { redirectTo },
     });
