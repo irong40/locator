@@ -53,8 +53,7 @@ async function inviteUserHandler(req: Request): Promise<Response> {
       );
     }
 
-    const origin = req.headers.get("origin") || "https://lovable.dev";
-    const redirectTo = `${origin}/reset-password`;
+    const redirectTo = "https://locator.dradamopierce.com/reset-password";
     console.log(`Redirect URL: ${redirectTo}`);
 
     const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
