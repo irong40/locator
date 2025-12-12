@@ -2,13 +2,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useUserRole } from '@/hooks/useUserRole';
 import { 
   MapPin, 
   Building2, 
   User, 
   KeyRound, 
   LogOut, 
-  Search,
   Edit,
   Eye,
   Filter,
@@ -27,20 +27,57 @@ import {
   UserCheck,
   UserX,
   AlertTriangle,
-  Database
+  Database,
+  Pencil
 } from 'lucide-react';
 
 export default function HelpGuideAdmin() {
+  const { isAdmin, isManager, isLoading } = useUserRole();
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-4xl">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-4 bg-muted rounded w-2/3"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const roleBadge = isAdmin ? 'Admin' : 'Manager';
+  const roleDescription = isAdmin 
+    ? "Complete administrative guide including all system management features."
+    : "Guide for managing vendors, catalog items, and viewing system data.";
+
+  // Calculate section numbers dynamically based on visible sections
+  let sectionNum = 1;
+  const getSectionNum = () => sectionNum++;
+
+  // Reset for TOC calculation
+  const tocSections = {
+    gettingStarted: 1,
+    findingVendors: 2,
+    managingVendors: 3,
+    profile: 4,
+    account: 5,
+    dashboard: isAdmin || isManager ? 6 : null,
+    userManagement: isAdmin ? 7 : null,
+    catalogManagement: isAdmin || isManager ? (isAdmin ? 8 : 7) : null,
+    auditLogs: isAdmin ? 9 : null,
+    dataMigration: isAdmin ? 10 : null,
+  };
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
-          <h1 className="text-3xl font-heading font-bold text-foreground">Admin Help Guide</h1>
-          <Badge className="bg-primary">Admin Only</Badge>
+          <h1 className="text-3xl font-heading font-bold text-foreground">
+            {isAdmin ? 'Admin' : 'Manager'} Help Guide
+          </h1>
+          <Badge className="bg-primary">{roleBadge}</Badge>
         </div>
-        <p className="text-muted-foreground">
-          Complete administrative guide for C&R Repair Vendor Locator. Includes all user features plus administrative functions.
-        </p>
+        <p className="text-muted-foreground">{roleDescription}</p>
       </div>
 
       {/* Table of Contents */}
@@ -54,23 +91,29 @@ export default function HelpGuideAdmin() {
         <CardContent>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <h4 className="font-semibold mb-2 text-foreground">User Features</h4>
+              <h4 className="font-semibold mb-2 text-foreground">Core Features</h4>
               <ul className="space-y-1">
                 <li><a href="#getting-started" className="text-primary hover:underline text-sm">1. Getting Started</a></li>
                 <li><a href="#finding-vendors" className="text-primary hover:underline text-sm">2. Finding Vendors</a></li>
-                <li><a href="#managing-vendors" className="text-primary hover:underline text-sm">3. Viewing & Managing Vendors</a></li>
-                <li><a href="#profile" className="text-primary hover:underline text-sm">4. Managing Your Profile</a></li>
+                <li><a href="#managing-vendors" className="text-primary hover:underline text-sm">3. Managing Vendors</a></li>
+                <li><a href="#profile" className="text-primary hover:underline text-sm">4. Your Profile</a></li>
                 <li><a href="#account" className="text-primary hover:underline text-sm">5. Password & Account</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-2 text-foreground">Admin Features</h4>
+              <h4 className="font-semibold mb-2 text-foreground">{isAdmin ? 'Admin' : 'Manager'} Features</h4>
               <ul className="space-y-1">
-                <li><a href="#dashboard" className="text-primary hover:underline text-sm">6. Dashboard Overview</a></li>
-                <li><a href="#user-management" className="text-primary hover:underline text-sm">7. User Management</a></li>
-                <li><a href="#catalog-management" className="text-primary hover:underline text-sm">8. Catalog Management</a></li>
-                <li><a href="#audit-logs" className="text-primary hover:underline text-sm">9. Audit Logs</a></li>
-                <li><a href="#data-migration" className="text-primary hover:underline text-sm">10. Data Migration</a></li>
+                <li><a href="#dashboard" className="text-primary hover:underline text-sm">6. Dashboard</a></li>
+                {isAdmin && (
+                  <li><a href="#user-management" className="text-primary hover:underline text-sm">7. User Management</a></li>
+                )}
+                <li><a href="#catalog-management" className="text-primary hover:underline text-sm">{isAdmin ? '8' : '7'}. Catalog Management</a></li>
+                {isAdmin && (
+                  <>
+                    <li><a href="#audit-logs" className="text-primary hover:underline text-sm">9. Audit Logs</a></li>
+                    <li><a href="#data-migration" className="text-primary hover:underline text-sm">10. Data Migration</a></li>
+                  </>
+                )}
               </ul>
             </div>
           </div>
@@ -85,7 +128,7 @@ export default function HelpGuideAdmin() {
               <User className="h-5 w-5 text-primary" />
               1. Getting Started
             </CardTitle>
-            <CardDescription>Learn how to log in and navigate the system</CardDescription>
+            <CardDescription>Log in and navigate the system</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -100,10 +143,10 @@ export default function HelpGuideAdmin() {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="navigation">
-                <AccordionTrigger>Admin Navigation</AccordionTrigger>
+                <AccordionTrigger>Navigation Overview</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-muted-foreground mb-3">
-                    As an Admin, you have access to all sections:
+                    Your sidebar includes:
                   </p>
                   <ul className="space-y-2 text-muted-foreground">
                     <li className="flex items-center gap-2">
@@ -118,12 +161,16 @@ export default function HelpGuideAdmin() {
                     <li className="flex items-center gap-2">
                       <Factory className="h-4 w-4" /> <strong>Catalog</strong> - OEM Brands, Engine Brands, Products, Payment Types
                     </li>
-                    <li className="flex items-center gap-2">
-                      <Users className="h-4 w-4" /> <strong>User Management</strong> - Manage users
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <History className="h-4 w-4" /> <strong>Audit Logs</strong> - View system activity
-                    </li>
+                    {isAdmin && (
+                      <>
+                        <li className="flex items-center gap-2">
+                          <Users className="h-4 w-4" /> <strong>User Management</strong> - Manage users
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <History className="h-4 w-4" /> <strong>Audit Logs</strong> - View system activity
+                        </li>
+                      </>
+                    )}
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -182,14 +229,16 @@ export default function HelpGuideAdmin() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-primary" />
-              3. Viewing & Managing Vendors
+              3. Managing Vendors
             </CardTitle>
             <CardDescription>Full vendor management capabilities</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="browse">
-                <AccordionTrigger>Browsing & Filtering</AccordionTrigger>
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" /> Browsing & Filtering
+                </AccordionTrigger>
                 <AccordionContent>
                   <p className="text-muted-foreground mb-3">Filter vendors by:</p>
                   <ul className="space-y-2 text-muted-foreground">
@@ -201,9 +250,11 @@ export default function HelpGuideAdmin() {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="vendor-detail">
-                <AccordionTrigger>Vendor Details & Editing</AccordionTrigger>
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Pencil className="h-4 w-4" /> Editing Vendors
+                </AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-muted-foreground mb-3">Click a vendor to view/edit:</p>
+                  <p className="text-muted-foreground mb-3">Click a vendor to view and edit:</p>
                   <ul className="space-y-2 text-muted-foreground">
                     <li><strong>Contact Information</strong> - Phone, email, fax, point of contact</li>
                     <li><strong>Address</strong> - Full address with coordinates</li>
@@ -211,6 +262,38 @@ export default function HelpGuideAdmin() {
                     <li><strong>Brand Associations</strong> - Link OEM and Engine brands</li>
                     <li><strong>Payment Type</strong> - Set accepted payment method</li>
                   </ul>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="create-vendor">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" /> Creating Vendors
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                    <li>Click the <strong>+ Add Vendor</strong> button on the Vendors page</li>
+                    <li>Fill in vendor information (name is required)</li>
+                    <li>Add address details - coordinates are calculated automatically</li>
+                    <li>Set OEM/EPP certifications as needed</li>
+                    <li>Click <strong>Create Vendor</strong> to save</li>
+                  </ol>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="delete-vendor">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" /> Deleting Vendors
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      Deleting a vendor removes all associated data including brand links and products.
+                    </AlertDescription>
+                  </Alert>
+                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                    <li>Open the vendor's detail page</li>
+                    <li>Click the <strong>Delete</strong> button</li>
+                    <li>Confirm deletion in the dialog</li>
+                  </ol>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -224,7 +307,7 @@ export default function HelpGuideAdmin() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
-              4. Managing Your Profile
+              4. Your Profile
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -252,13 +335,17 @@ export default function HelpGuideAdmin() {
         </Card>
       </section>
 
-      {/* ADMIN SECTIONS */}
+      {/* ADMIN/MANAGER SECTIONS HEADER */}
       <div className="mb-4">
         <h2 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
           <Shield className="h-6 w-6 text-primary" />
-          Administrative Features
+          {isAdmin ? 'Administrative' : 'Manager'} Features
         </h2>
-        <p className="text-muted-foreground">The following sections are only available to Admin users.</p>
+        <p className="text-muted-foreground">
+          {isAdmin 
+            ? "Full system administration capabilities."
+            : "Features for managing vendors and catalog data."}
+        </p>
       </div>
 
       {/* Dashboard */}
@@ -267,7 +354,7 @@ export default function HelpGuideAdmin() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
-              6. Dashboard Overview
+              6. Dashboard
             </CardTitle>
             <CardDescription>System metrics and quick insights</CardDescription>
           </CardHeader>
@@ -276,7 +363,6 @@ export default function HelpGuideAdmin() {
               <AccordionItem value="metrics">
                 <AccordionTrigger>Key Metrics</AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-muted-foreground mb-3">The dashboard displays:</p>
                   <ul className="space-y-2 text-muted-foreground">
                     <li><strong>Total Vendors</strong> - Number of vendors in the system</li>
                     <li><strong>OEM Vendors</strong> - Vendors with OEM certification</li>
@@ -291,17 +377,7 @@ export default function HelpGuideAdmin() {
                   <ul className="space-y-2 text-muted-foreground">
                     <li><strong>Preference Distribution</strong> - Breakdown of vendor preferences</li>
                     <li><strong>Vendor Level Distribution</strong> - Breakdown of service levels</li>
-                    <li><strong>OEM/EPP Status</strong> - Certification breakdown</li>
                     <li><strong>Top States</strong> - States with most vendors</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="quick-search">
-                <AccordionTrigger>Quick Search & Recent Vendors</AccordionTrigger>
-                <AccordionContent>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li><strong>Quick Search</strong> - Instantly search vendors by name</li>
-                    <li><strong>Recent Vendors</strong> - View most recently added/updated vendors</li>
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -310,100 +386,102 @@ export default function HelpGuideAdmin() {
         </Card>
       </section>
 
-      {/* User Management */}
-      <section id="user-management" className="mb-8">
-        <Card className="border-primary/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              7. User Management
-            </CardTitle>
-            <CardDescription>Manage user accounts and access</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="view-users">
-                <AccordionTrigger className="flex items-center gap-2">
-                  <Eye className="h-4 w-4" /> Viewing Users
-                </AccordionTrigger>
-                <AccordionContent>
-                  <p className="text-muted-foreground mb-3">
-                    Go to <strong>User Management</strong> to see all users in the system.
-                  </p>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li>Use the search box to find users by name or email</li>
-                    <li>Click the eye icon to view full user details</li>
-                    <li>See user role, status (active/inactive), and contact info</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="invite-users">
-                <AccordionTrigger className="flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" /> Inviting New Users
-                </AccordionTrigger>
-                <AccordionContent>
-                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-                    <li>Click the <strong>+ Invite User</strong> button</li>
-                    <li>Enter the user's email address</li>
-                    <li>Enter their first and last name</li>
-                    <li>Select a role (Viewer, User, Manager, or Admin)</li>
-                    <li>Click <strong>Send Invite</strong></li>
-                    <li>The user will receive an email with login instructions</li>
-                  </ol>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="edit-role">
-                <AccordionTrigger className="flex items-center gap-2">
-                  <Edit className="h-4 w-4" /> Editing User Roles
-                </AccordionTrigger>
-                <AccordionContent>
-                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-                    <li>Find the user in the list</li>
-                    <li>Click the <strong>Edit</strong> button</li>
-                    <li>Select a new role from the dropdown</li>
-                    <li>Click <strong>Update Role</strong> to save</li>
-                  </ol>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="activate-deactivate">
-                <AccordionTrigger className="flex items-center gap-2">
-                  <UserCheck className="h-4 w-4" /> Activating/Deactivating Users
-                </AccordionTrigger>
-                <AccordionContent>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <UserX className="h-4 w-4 text-destructive" /> 
-                      <span><strong>Deactivate</strong> - Prevents the user from logging in (reversible)</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <UserCheck className="h-4 w-4 text-green-500" /> 
-                      <span><strong>Activate</strong> - Restores access for a deactivated user</span>
-                    </li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="delete-user">
-                <AccordionTrigger className="flex items-center gap-2">
-                  <Trash2 className="h-4 w-4" /> Permanently Deleting Users
-                </AccordionTrigger>
-                <AccordionContent>
-                  <Alert variant="destructive" className="mb-4">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      Permanent deletion cannot be undone. The user's account and all associated data will be removed.
-                    </AlertDescription>
-                  </Alert>
-                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-                    <li>Find the user in the list</li>
-                    <li>Click the <strong>Trash</strong> icon</li>
-                    <li>Confirm by clicking <strong>Delete Permanently</strong></li>
-                  </ol>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </CardContent>
-        </Card>
-      </section>
+      {/* User Management - Admin Only */}
+      {isAdmin && (
+        <section id="user-management" className="mb-8">
+          <Card className="border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                7. User Management
+              </CardTitle>
+              <CardDescription>Manage user accounts and access</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="view-users">
+                  <AccordionTrigger className="flex items-center gap-2">
+                    <Eye className="h-4 w-4" /> Viewing Users
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-muted-foreground mb-3">
+                      Go to <strong>User Management</strong> to see all users.
+                    </p>
+                    <ul className="space-y-2 text-muted-foreground">
+                      <li>Use the search box to find users by name or email</li>
+                      <li>Click the eye icon to view full user details</li>
+                      <li>See user role, status (active/inactive), and contact info</li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="invite-users">
+                  <AccordionTrigger className="flex items-center gap-2">
+                    <UserPlus className="h-4 w-4" /> Inviting New Users
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                      <li>Click the <strong>+ Invite User</strong> button</li>
+                      <li>Enter the user's email address</li>
+                      <li>Enter their first and last name</li>
+                      <li>Select a role (Viewer, User, Manager, or Admin)</li>
+                      <li>Click <strong>Send Invite</strong></li>
+                      <li>The user will receive an email with login instructions</li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="edit-role">
+                  <AccordionTrigger className="flex items-center gap-2">
+                    <Edit className="h-4 w-4" /> Editing User Roles
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                      <li>Find the user in the list</li>
+                      <li>Click the <strong>Edit</strong> button</li>
+                      <li>Select a new role from the dropdown</li>
+                      <li>Click <strong>Update Role</strong> to save</li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="activate-deactivate">
+                  <AccordionTrigger className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4" /> Activating/Deactivating Users
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <ul className="space-y-2 text-muted-foreground">
+                      <li className="flex items-center gap-2">
+                        <UserX className="h-4 w-4 text-destructive" /> 
+                        <span><strong>Deactivate</strong> - Prevents the user from logging in (reversible)</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <UserCheck className="h-4 w-4 text-green-500" /> 
+                        <span><strong>Activate</strong> - Restores access for a deactivated user</span>
+                      </li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="delete-user">
+                  <AccordionTrigger className="flex items-center gap-2">
+                    <Trash2 className="h-4 w-4" /> Permanently Deleting Users
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <Alert variant="destructive" className="mb-4">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Permanent deletion cannot be undone. The user's account and all associated data will be removed.
+                      </AlertDescription>
+                    </Alert>
+                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                      <li>Find the user in the list</li>
+                      <li>Click the <strong>Trash</strong> icon</li>
+                      <li>Confirm by clicking <strong>Delete Permanently</strong></li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* Catalog Management */}
       <section id="catalog-management" className="mb-8">
@@ -411,7 +489,7 @@ export default function HelpGuideAdmin() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5 text-primary" />
-              8. Catalog Management
+              {isAdmin ? '8' : '7'}. Catalog Management
             </CardTitle>
             <CardDescription>Manage brands, products, and payment types</CardDescription>
           </CardHeader>
@@ -422,9 +500,6 @@ export default function HelpGuideAdmin() {
                   <Factory className="h-4 w-4" /> OEM Brands
                 </AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-muted-foreground mb-3">
-                    Manage Original Equipment Manufacturer brands:
-                  </p>
                   <ul className="space-y-2 text-muted-foreground">
                     <li><strong>Add</strong> - Click "+ Add OEM Brand" and enter the name</li>
                     <li><strong>Edit</strong> - Click edit icon to rename</li>
@@ -437,9 +512,6 @@ export default function HelpGuideAdmin() {
                   <Wrench className="h-4 w-4" /> Engine Brands
                 </AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-muted-foreground mb-3">
-                    Manage engine brands and certifications:
-                  </p>
                   <ul className="space-y-2 text-muted-foreground">
                     <li><strong>Add</strong> - Click "+ Add Engine Brand" and enter the name</li>
                     <li><strong>Edit</strong> - Click edit icon to rename</li>
@@ -452,9 +524,6 @@ export default function HelpGuideAdmin() {
                   <Package className="h-4 w-4" /> Products
                 </AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-muted-foreground mb-3">
-                    Manage the product catalog:
-                  </p>
                   <ul className="space-y-2 text-muted-foreground">
                     <li><strong>Add</strong> - Click "+ Add Product" and enter the name</li>
                     <li><strong>Edit</strong> - Click edit icon to rename</li>
@@ -467,9 +536,6 @@ export default function HelpGuideAdmin() {
                   <CreditCard className="h-4 w-4" /> Payment Types
                 </AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-muted-foreground mb-3">
-                    Manage accepted payment methods (Admin only):
-                  </p>
                   <ul className="space-y-2 text-muted-foreground">
                     <li><strong>Add</strong> - Click "+ Add Payment Type" and enter the name</li>
                     <li><strong>Edit</strong> - Click edit icon to rename</li>
@@ -483,10 +549,10 @@ export default function HelpGuideAdmin() {
                   <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
                     <li>Open a vendor's detail page</li>
                     <li>Scroll to the "OEM Brands" or "Engine Brands" section</li>
-                    <li>Click <strong>+ Add Brand</strong></li>
+                    <li>Click <strong>+ Add</strong></li>
                     <li>Select brands from the dropdown</li>
                     <li>For engine brands, optionally check "Certified"</li>
-                    <li>Click <strong>Add</strong> to save the link</li>
+                    <li>Click <strong>Add</strong> to save</li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>
@@ -495,86 +561,90 @@ export default function HelpGuideAdmin() {
         </Card>
       </section>
 
-      {/* Audit Logs */}
-      <section id="audit-logs" className="mb-8">
-        <Card className="border-primary/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <History className="h-5 w-5 text-primary" />
-              9. Audit Logs
-            </CardTitle>
-            <CardDescription>Track system activity and changes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="viewing-logs">
-                <AccordionTrigger>Viewing Audit Logs</AccordionTrigger>
-                <AccordionContent>
-                  <p className="text-muted-foreground mb-3">
-                    Go to <strong>Audit Logs</strong> to view system activity:
-                  </p>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li><strong>Timestamp</strong> - When the action occurred</li>
-                    <li><strong>Actor</strong> - Who performed the action</li>
-                    <li><strong>Entity</strong> - What was affected (vendor, user, etc.)</li>
-                    <li><strong>Action</strong> - What happened (create, update, delete)</li>
-                    <li><strong>Before/After</strong> - The data changes (if applicable)</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="filtering-logs">
-                <AccordionTrigger>Filtering & Searching</AccordionTrigger>
-                <AccordionContent>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li>Use search to find logs by entity or action</li>
-                    <li>Filter by entity type (vendors, users, etc.)</li>
-                    <li>Filter by action type (create, update, delete)</li>
-                    <li>Sort by date to see most recent changes first</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </CardContent>
-        </Card>
-      </section>
+      {/* Audit Logs - Admin Only */}
+      {isAdmin && (
+        <section id="audit-logs" className="mb-8">
+          <Card className="border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5 text-primary" />
+                9. Audit Logs
+              </CardTitle>
+              <CardDescription>Track system activity and changes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="viewing-logs">
+                  <AccordionTrigger>Viewing Audit Logs</AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-muted-foreground mb-3">
+                      Go to <strong>Audit Logs</strong> to view system activity:
+                    </p>
+                    <ul className="space-y-2 text-muted-foreground">
+                      <li><strong>Timestamp</strong> - When the action occurred</li>
+                      <li><strong>Actor</strong> - Who performed the action</li>
+                      <li><strong>Entity</strong> - What was affected (vendor, user, etc.)</li>
+                      <li><strong>Action</strong> - What happened (create, update, delete)</li>
+                      <li><strong>Before/After</strong> - The data changes</li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="filtering-logs">
+                  <AccordionTrigger>Filtering & Searching</AccordionTrigger>
+                  <AccordionContent>
+                    <ul className="space-y-2 text-muted-foreground">
+                      <li>Use search to find logs by entity or action</li>
+                      <li>Filter by entity type (vendors, users, etc.)</li>
+                      <li>Filter by action type (create, update, delete)</li>
+                      <li>Sort by date to see most recent changes first</li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
-      {/* Data Migration */}
-      <section id="data-migration" className="mb-8">
-        <Card className="border-primary/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5 text-primary" />
-              10. Data Migration
-            </CardTitle>
-            <CardDescription>Import data from legacy systems</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="importing">
-                <AccordionTrigger>Importing Legacy Data</AccordionTrigger>
-                <AccordionContent>
-                  <Alert className="mb-4">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      Data migration should only be performed during initial setup or with proper planning.
-                    </AlertDescription>
-                  </Alert>
-                  <p className="text-muted-foreground">
-                    The Data Migration page allows you to import data from the legacy Laravel system. 
-                    Contact your system administrator for assistance with data migration.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </CardContent>
-        </Card>
-      </section>
+      {/* Data Migration - Admin Only */}
+      {isAdmin && (
+        <section id="data-migration" className="mb-8">
+          <Card className="border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5 text-primary" />
+                10. Data Migration
+              </CardTitle>
+              <CardDescription>Import data from legacy systems</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="importing">
+                  <AccordionTrigger>Importing Legacy Data</AccordionTrigger>
+                  <AccordionContent>
+                    <Alert className="mb-4">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Data migration should only be performed during initial setup or with proper planning.
+                      </AlertDescription>
+                    </Alert>
+                    <p className="text-muted-foreground">
+                      The Data Migration page allows you to import data from the legacy system. 
+                      Contact your system administrator for assistance.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* Footer */}
       <Card className="bg-muted/50">
         <CardContent className="pt-6">
           <p className="text-center text-muted-foreground">
-            Need technical assistance? Contact your system administrator or IT department.
+            Need technical assistance? Contact your system administrator.
           </p>
         </CardContent>
       </Card>
