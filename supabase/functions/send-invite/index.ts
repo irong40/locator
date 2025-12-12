@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { Resend } from "npm:resend@2.0.0";
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -9,12 +10,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface InviteRequest {
-  email: string;
-  firstName: string;
-  lastName: string;
-  roleId: string;
-}
+// Zod schema for request validation
+const InviteSchema = z.object({
+  email: z.string().email({ message: 'Invalid email address' }).max(255, { message: 'Email must be less than 255 characters' }),
+  firstName: z.string().trim().min(1, { message: 'First name is required' }).max(100, { message: 'First name must be less than 100 characters' }),
+  lastName: z.string().trim().min(1, { message: 'Last name is required' }).max(100, { message: 'Last name must be less than 100 characters' }),
+  roleId: z.string().uuid({ message: 'roleId must be a valid UUID' }),
+});
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -29,7 +31,10 @@ const handler = async (req: Request): Promise<Response> => {
     // Verify the requesting user is an admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      throw new Error("No authorization header");
+      return new Response(
+        JSON.stringify({ error: "No authorization header" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -41,7 +46,10 @@ const handler = async (req: Request): Promise<Response> => {
     
     if (authError || !requestingUser) {
       console.error("Auth error:", authError);
-      throw new Error("Unauthorized");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     // Check if requesting user is admin
@@ -53,11 +61,26 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (roleError || (roleData as any)?.user_roles?.role_name !== "Admin") {
       console.error("Role check failed:", roleError);
-      throw new Error("Only admins can send invitations");
+      return new Response(
+        JSON.stringify({ error: "Only admins can send invitations" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
-    const { email, firstName, lastName, roleId }: InviteRequest = await req.json();
+    // Parse and validate request body
+    const rawBody = await req.json();
+    const parseResult = InviteSchema.safeParse(rawBody);
+    
+    if (!parseResult.success) {
+      const errors = parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      console.error('Validation error:', errors);
+      return new Response(
+        JSON.stringify({ error: `Validation failed: ${errors}` }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
+    const { email, firstName, lastName, roleId } = parseResult.data;
     console.log(`Inviting user: ${email} with role: ${roleId}`);
 
     // Create user with a random password (they'll reset it)
@@ -74,7 +97,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (createError) {
       console.error("Create user error:", createError);
-      throw new Error(createError.message);
+      return new Response(
+        JSON.stringify({ error: createError.message }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     console.log(`User created: ${newUser.user.id}`);
@@ -103,7 +129,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (resetError) {
       console.error("Reset link error:", resetError);
-      throw new Error("Failed to generate invitation link");
+      return new Response(
+        JSON.stringify({ error: "Failed to generate invitation link" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     const inviteLink = resetData.properties.action_link;
@@ -147,7 +176,10 @@ const handler = async (req: Request): Promise<Response> => {
     // Check for email sending errors
     if (emailResponse.error) {
       console.error("Resend email error:", emailResponse.error);
-      throw new Error(`Failed to send invitation email: ${emailResponse.error.message}`);
+      return new Response(
+        JSON.stringify({ error: `Failed to send invitation email: ${emailResponse.error.message}` }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     console.log("Email sent successfully:", emailResponse.data);

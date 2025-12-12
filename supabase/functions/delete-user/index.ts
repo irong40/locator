@@ -1,9 +1,15 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Zod schema for request validation
+const DeleteUserSchema = z.object({
+  userId: z.string().uuid({ message: 'userId must be a valid UUID' }),
+});
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -70,15 +76,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Parse request body
-    const { userId } = await req.json();
-    if (!userId) {
+    // Parse and validate request body
+    const rawBody = await req.json();
+    const parseResult = DeleteUserSchema.safeParse(rawBody);
+    
+    if (!parseResult.success) {
+      const errors = parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      console.error('Validation error:', errors);
       return new Response(
-        JSON.stringify({ error: 'userId is required' }),
+        JSON.stringify({ error: `Validation failed: ${errors}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    const { userId } = parseResult.data;
     console.log('Deleting user:', userId);
 
     // Prevent self-deletion
