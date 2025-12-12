@@ -1,29 +1,44 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
+import { useUserRole } from '@/hooks/useUserRole';
 import { 
   MapPin, 
   Building2, 
   User, 
   KeyRound, 
   LogOut, 
-  Search,
-  Edit,
   Eye,
   Filter,
-  Plus,
   BookOpen,
   Wrench,
-  Factory
+  Factory,
+  Pencil,
+  Package
 } from 'lucide-react';
 
 export default function HelpGuideUser() {
+  const { canEdit, isLoading } = useUserRole();
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-4xl">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-4 bg-muted rounded w-2/3"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-heading font-bold text-foreground mb-2">User Help Guide</h1>
+        <h1 className="text-3xl font-heading font-bold text-foreground mb-2">Help Guide</h1>
         <p className="text-muted-foreground">
-          Welcome to C&R Repair Vendor Locator. This guide will help you navigate and use the system effectively.
+          {canEdit 
+            ? "Welcome! This guide will help you find vendors, view details, and edit vendor information."
+            : "Welcome! This guide will help you find and view vendor information."}
         </p>
       </div>
 
@@ -39,9 +54,12 @@ export default function HelpGuideUser() {
           <ul className="space-y-2">
             <li><a href="#getting-started" className="text-primary hover:underline">1. Getting Started</a></li>
             <li><a href="#finding-vendors" className="text-primary hover:underline">2. Finding Vendors</a></li>
-            <li><a href="#managing-vendors" className="text-primary hover:underline">3. Viewing & Managing Vendors</a></li>
-            <li><a href="#profile" className="text-primary hover:underline">4. Managing Your Profile</a></li>
-            <li><a href="#account" className="text-primary hover:underline">5. Password & Account</a></li>
+            <li><a href="#viewing-vendors" className="text-primary hover:underline">3. Viewing Vendors</a></li>
+            {canEdit && (
+              <li><a href="#editing-vendors" className="text-primary hover:underline">4. Editing Vendors</a></li>
+            )}
+            <li><a href="#profile" className="text-primary hover:underline">{canEdit ? '5' : '4'}. Managing Your Profile</a></li>
+            <li><a href="#account" className="text-primary hover:underline">{canEdit ? '6' : '5'}. Password & Account</a></li>
           </ul>
         </CardContent>
       </Card>
@@ -73,7 +91,7 @@ export default function HelpGuideUser() {
                 <AccordionTrigger>Navigating the Sidebar</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-muted-foreground mb-3">
-                    The sidebar on the left contains all navigation options available to you:
+                    The sidebar on the left contains your navigation options:
                   </p>
                   <ul className="space-y-2 text-muted-foreground">
                     <li className="flex items-center gap-2">
@@ -81,32 +99,6 @@ export default function HelpGuideUser() {
                     </li>
                     <li className="flex items-center gap-2">
                       <Building2 className="h-4 w-4" /> <strong>Vendors</strong> - Browse all vendors
-                    </li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="roles">
-                <AccordionTrigger>Understanding Your Role</AccordionTrigger>
-                <AccordionContent>
-                  <p className="text-muted-foreground mb-3">
-                    Your role determines what actions you can perform:
-                  </p>
-                  <ul className="space-y-2">
-                    <li className="flex items-center gap-2">
-                      <Badge variant="outline">Viewer</Badge>
-                      <span className="text-muted-foreground">Can view vendors and search</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Badge variant="outline">User</Badge>
-                      <span className="text-muted-foreground">Can view and create/edit vendors</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Badge variant="outline">Manager</Badge>
-                      <span className="text-muted-foreground">Can manage vendors and catalogs</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Badge variant="outline">Admin</Badge>
-                      <span className="text-muted-foreground">Full system access</span>
                     </li>
                   </ul>
                 </AccordionContent>
@@ -163,15 +155,15 @@ export default function HelpGuideUser() {
         </Card>
       </section>
 
-      {/* Managing Vendors */}
-      <section id="managing-vendors" className="mb-8">
+      {/* Viewing Vendors */}
+      <section id="viewing-vendors" className="mb-8">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-primary" />
-              3. Viewing & Managing Vendors
+              3. Viewing Vendors
             </CardTitle>
-            <CardDescription>Browse, filter, and manage vendor information</CardDescription>
+            <CardDescription>Browse and filter vendor information</CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -202,21 +194,6 @@ export default function HelpGuideUser() {
                   </ul>
                 </AccordionContent>
               </AccordionItem>
-              <AccordionItem value="inline-edit">
-                <AccordionTrigger className="flex items-center gap-2">
-                  <Edit className="h-4 w-4" /> Inline Editing
-                </AccordionTrigger>
-                <AccordionContent>
-                  <p className="text-muted-foreground mb-3">
-                    If you have edit permissions, you can quickly edit vendor information directly from the list:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-                    <li>Click the edit icon next to a vendor name or location</li>
-                    <li>Make your changes in the popup</li>
-                    <li>Click Save to confirm</li>
-                  </ol>
-                </AccordionContent>
-              </AccordionItem>
               <AccordionItem value="vendor-detail">
                 <AccordionTrigger>Vendor Details Page</AccordionTrigger>
                 <AccordionContent>
@@ -238,27 +215,85 @@ export default function HelpGuideUser() {
                   </ul>
                 </AccordionContent>
               </AccordionItem>
-              <AccordionItem value="create-vendor">
-                <AccordionTrigger className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" /> Creating a New Vendor
-                </AccordionTrigger>
-                <AccordionContent>
-                  <p className="text-muted-foreground mb-3">
-                    If you have User role or above:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-                    <li>Click the <strong>+ Add Vendor</strong> button on the Vendors page</li>
-                    <li>Fill in the vendor information (name is required)</li>
-                    <li>Add address details - the system will automatically calculate coordinates</li>
-                    <li>Set OEM/EPP certifications as needed</li>
-                    <li>Click <strong>Create Vendor</strong> to save</li>
-                  </ol>
-                </AccordionContent>
-              </AccordionItem>
             </Accordion>
           </CardContent>
         </Card>
       </section>
+
+      {/* Editing Vendors - Only shown for Users who can edit */}
+      {canEdit && (
+        <section id="editing-vendors" className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Pencil className="h-5 w-5 text-primary" />
+                4. Editing Vendors
+              </CardTitle>
+              <CardDescription>Update vendor information and add brands/products</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="edit-vendor">
+                  <AccordionTrigger className="flex items-center gap-2">
+                    <Pencil className="h-4 w-4" /> Editing Vendor Information
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                      <li>Navigate to the vendor's detail page by clicking on their name</li>
+                      <li>Click the <strong>Edit</strong> button at the top of the page</li>
+                      <li>Update the vendor's contact info, address, certifications, or other details</li>
+                      <li>Click <strong>Save Changes</strong> to confirm your edits</li>
+                    </ol>
+                    <p className="text-muted-foreground mt-3 text-sm italic">
+                      Note: You can edit vendor details but cannot delete vendors.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="add-brands">
+                  <AccordionTrigger className="flex items-center gap-2">
+                    <Factory className="h-4 w-4" /> Adding OEM & EPP Brands
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                      <li>On the vendor detail page, scroll to the <strong>OEM Brands</strong> or <strong>EPP Brands</strong> section</li>
+                      <li>Click the <strong>+ Add</strong> button</li>
+                      <li>Select a brand from the dropdown list</li>
+                      <li>Click <strong>Add</strong> to associate the brand with the vendor</li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="add-engine-brands">
+                  <AccordionTrigger className="flex items-center gap-2">
+                    <Wrench className="h-4 w-4" /> Adding Engine Brands
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                      <li>On the vendor detail page, scroll to the <strong>Engine Brands</strong> section</li>
+                      <li>Click the <strong>+ Add</strong> button</li>
+                      <li>Select an engine brand from the dropdown list</li>
+                      <li>Toggle the <strong>Certified</strong> switch if the vendor is certified for that brand</li>
+                      <li>Click <strong>Add</strong> to save</li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="add-products">
+                  <AccordionTrigger className="flex items-center gap-2">
+                    <Package className="h-4 w-4" /> Adding Products
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                      <li>On the vendor detail page, scroll to the <strong>Products</strong> section</li>
+                      <li>Click the <strong>+ Add</strong> button</li>
+                      <li>Select a product from the dropdown list</li>
+                      <li>Click <strong>Add</strong> to associate the product with the vendor</li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* Profile */}
       <section id="profile" className="mb-8">
@@ -266,7 +301,7 @@ export default function HelpGuideUser() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
-              4. Managing Your Profile
+              {canEdit ? '5' : '4'}. Managing Your Profile
             </CardTitle>
             <CardDescription>Update your personal information</CardDescription>
           </CardHeader>
@@ -294,7 +329,7 @@ export default function HelpGuideUser() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <KeyRound className="h-5 w-5 text-primary" />
-              5. Password & Account
+              {canEdit ? '6' : '5'}. Password & Account
             </CardTitle>
             <CardDescription>Manage your password and account access</CardDescription>
           </CardHeader>
