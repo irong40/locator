@@ -65,6 +65,87 @@ export type Database = {
         }
         Relationships: []
       }
+      maintenance_tickets: {
+        Row: {
+          browser_info: string | null
+          category: string | null
+          component_stack: string | null
+          created_at: string | null
+          description: string | null
+          error_message: string | null
+          error_name: string | null
+          error_stack: string | null
+          id: string
+          log_message: string | null
+          log_type: string | null
+          metadata: Json | null
+          page_url: string | null
+          priority: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          ticket_number: string
+          title: string | null
+          type: string
+          updated_at: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          browser_info?: string | null
+          category?: string | null
+          component_stack?: string | null
+          created_at?: string | null
+          description?: string | null
+          error_message?: string | null
+          error_name?: string | null
+          error_stack?: string | null
+          id?: string
+          log_message?: string | null
+          log_type?: string | null
+          metadata?: Json | null
+          page_url?: string | null
+          priority?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          ticket_number: string
+          title?: string | null
+          type: string
+          updated_at?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          browser_info?: string | null
+          category?: string | null
+          component_stack?: string | null
+          created_at?: string | null
+          description?: string | null
+          error_message?: string | null
+          error_name?: string | null
+          error_stack?: string | null
+          id?: string
+          log_message?: string | null
+          log_type?: string | null
+          metadata?: Json | null
+          page_url?: string | null
+          priority?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          ticket_number?: string
+          title?: string | null
+          type?: string
+          updated_at?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       migration_mappings: {
         Row: {
           created_at: string | null

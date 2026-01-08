@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -9,6 +10,7 @@ import { useRecoveryRedirect } from '@/hooks/useRecoveryRedirect';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AccessDenied } from '@/components/auth/AccessDenied';
 import { MaintenanceErrorBoundary, ReportIssueButton } from '@/components/maintenance';
+import { maintenanceAgent } from '@/lib/maintenance-agent';
 import type { UserRole } from '@/lib/types';
 import Index from './pages/Index';
 import Dashboard from './pages/Dashboard';
@@ -29,9 +31,16 @@ import DataMigration from './pages/DataMigration';
 import HelpGuideUser from './pages/HelpGuideUser';
 import HelpGuideAdmin from './pages/HelpGuideAdmin';
 import { HelpRedirect } from './components/help/HelpRedirect';
+import TroubleTickets from './pages/TroubleTickets';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
+
+// Configure maintenance agent for Mission Control
+maintenanceAgent.configure({
+  supabaseUrl: 'https://zgutgcwzakyceylzwbry.supabase.co',
+  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpndXRnY3d6YWt5Y2V5bHp3YnJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczNTEyNjYsImV4cCI6MjA3MjkyNzI2Nn0.da-8PwDuznS_-4eG74Jry8rqV2oM_f6nV3tcKQGPclY',
+});
 
 // Component that handles recovery redirect detection
 function RecoveryRedirectHandler() {
@@ -205,6 +214,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['Admin', 'Manager']}>
             <HelpGuideAdmin />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trouble-tickets"
+        element={
+          <ProtectedRoute allowedRoles={['Admin']}>
+            <TroubleTickets />
           </ProtectedRoute>
         }
       />
