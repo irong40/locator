@@ -8,6 +8,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useRecoveryRedirect } from '@/hooks/useRecoveryRedirect';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AccessDenied } from '@/components/auth/AccessDenied';
+import { MaintenanceErrorBoundary, ReportIssueButton } from '@/components/maintenance';
 import type { UserRole } from '@/lib/types';
 import Index from './pages/Index';
 import Dashboard from './pages/Dashboard';
@@ -220,7 +221,10 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <MaintenanceErrorBoundary>
+            <AppRoutes />
+            <ReportIssueButton />
+          </MaintenanceErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
