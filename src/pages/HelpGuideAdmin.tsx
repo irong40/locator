@@ -32,7 +32,8 @@ import {
   AlertTriangle,
   Database,
   Pencil,
-  ArrowLeft
+  ArrowLeft,
+  Clock
 } from 'lucide-react';
 
 export default function HelpGuideAdmin() {
@@ -406,7 +407,35 @@ export default function HelpGuideAdmin() {
                     <ul className="space-y-2 text-muted-foreground">
                       <li>Use the search box to find users by name or email</li>
                       <li>Click the eye icon to view full user details</li>
-                      <li>See user role, status (active/inactive), and contact info</li>
+                      <li>See user role, login status, and contact info</li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="user-status">
+                  <AccordionTrigger className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" /> Understanding User Status
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-muted-foreground mb-3">
+                      User status is based on login activity:
+                    </p>
+                    <ul className="space-y-3 text-muted-foreground">
+                      <li className="flex items-center gap-2">
+                        <Badge className="bg-orange-500 text-white"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
+                        <span>User has been invited but hasn't logged in yet</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Badge className="bg-green-500 text-white"><UserCheck className="h-3 w-3 mr-1" />Active</Badge>
+                        <span>User logged in within the last 30 days</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Badge className="bg-yellow-500 text-black"><AlertTriangle className="h-3 w-3 mr-1" />Stale</Badge>
+                        <span>User hasn't logged in for 30-60 days</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Badge className="bg-red-500 text-white"><UserX className="h-3 w-3 mr-1" />Inactive</Badge>
+                        <span>User hasn't logged in for over 60 days (shows day count)</span>
+                      </li>
                     </ul>
                   </AccordionContent>
                 </AccordionItem>
