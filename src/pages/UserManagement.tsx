@@ -48,8 +48,30 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Mail, Eye, Pencil, Trash2, UserCheck, UserX, RefreshCw, Users } from 'lucide-react';
+import { Loader2, UserPlus, Mail, Eye, Pencil, Trash2, UserCheck, UserX, RefreshCw, Users, Clock, AlertTriangle } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
+
+// Login status types and helpers
+type LoginStatus = 'pending' | 'active' | 'stale' | 'inactive';
+
+const getLoginStatus = (lastSignIn: string | null): { status: LoginStatus; daysSince: number | null } => {
+  if (!lastSignIn) return { status: 'pending', daysSince: null };
+  
+  const lastLogin = new Date(lastSignIn);
+  const now = new Date();
+  const daysSince = Math.floor((now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (daysSince <= 30) return { status: 'active', daysSince };
+  if (daysSince <= 60) return { status: 'stale', daysSince };
+  return { status: 'inactive', daysSince };
+};
+
+const statusConfig = {
+  pending: { label: 'Pending', className: 'bg-orange-500 hover:bg-orange-500 text-white', icon: Clock },
+  active: { label: 'Active', className: 'bg-green-500 hover:bg-green-500 text-white', icon: UserCheck },
+  stale: { label: 'Stale', className: 'bg-yellow-500 hover:bg-yellow-500 text-black', icon: AlertTriangle },
+  inactive: { label: 'Inactive', className: 'bg-red-500 hover:bg-red-500 text-white', icon: UserX },
+};
 import { inviteSchema, profileEditSchema } from '@/lib/schemas/user';
 
 type UserWithRole = {
@@ -63,6 +85,7 @@ type UserWithRole = {
   created_at: string | null;
   role_name: UserRole | null;
   role_id: string | null;
+  last_sign_in_at: string | null;
 };
 
 type DialogActionType = 'activate' | 'deactivate' | 'delete' | 'resend-invite' | null;
@@ -109,14 +132,23 @@ const UserManagement = () => {
 
       if (assignmentsError) throw assignmentsError;
 
-      const usersWithRoles: UserWithRole[] = profiles.map((profile) => {
-        const assignment = assignments?.find((a) => a.user_id === profile.user_id);
-        return {
-          ...profile,
-          role_name: (assignment?.user_roles?.role_name as UserRole) || null,
-          role_id: assignment?.role_id || null,
-        };
-      });
+      const usersWithRoles: UserWithRole[] = await Promise.all(
+        profiles.map(async (profile) => {
+          const assignment = assignments?.find((a) => a.user_id === profile.user_id);
+          
+          // Fetch last_sign_in_at from auth.users via RPC
+          const { data: lastSignIn } = await supabase.rpc('get_user_last_sign_in', { 
+            _user_id: profile.user_id 
+          });
+          
+          return {
+            ...profile,
+            role_name: (assignment?.user_roles?.role_name as UserRole) || null,
+            role_id: assignment?.role_id || null,
+            last_sign_in_at: lastSignIn || null,
+          };
+        })
+      );
 
       return usersWithRoles;
     },
@@ -675,15 +707,20 @@ const UserManagement = () => {
                   {user.role_name || 'No role'}
                 </TableCell>
                 <TableCell>
-                  {user.is_active ? (
-                    <Badge className="bg-green-500 hover:bg-green-500 text-white uppercase text-xs font-semibold">
-                      Active
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="uppercase text-xs font-semibold">
-                      Inactive
-                    </Badge>
-                  )}
+                  {(() => {
+                    const { status, daysSince } = getLoginStatus(user.last_sign_in_at);
+                    const config = statusConfig[status];
+                    const Icon = config.icon;
+                    const label = status === 'inactive' && daysSince !== null
+                      ? `${config.label} (${daysSince} days)`
+                      : config.label;
+                    return (
+                      <Badge className={`${config.className} uppercase text-xs font-semibold`}>
+                        <Icon className="h-3 w-3 mr-1" />
+                        {label}
+                      </Badge>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
@@ -795,11 +832,20 @@ const UserManagement = () => {
                 <div>
                   <Label className="text-muted-foreground text-xs uppercase">Status</Label>
                   <p className="font-medium">
-                    {viewUser.is_active ? (
-                      <Badge className="bg-green-500 hover:bg-green-500 text-white">Active</Badge>
-                    ) : (
-                      <Badge variant="secondary">Inactive</Badge>
-                    )}
+                    {(() => {
+                      const { status, daysSince } = getLoginStatus(viewUser.last_sign_in_at);
+                      const config = statusConfig[status];
+                      const Icon = config.icon;
+                      const label = status === 'inactive' && daysSince !== null
+                        ? `${config.label} (${daysSince} days)`
+                        : config.label;
+                      return (
+                        <Badge className={config.className}>
+                          <Icon className="h-3 w-3 mr-1" />
+                          {label}
+                        </Badge>
+                      );
+                    })()}
                   </p>
                 </div>
               </div>
