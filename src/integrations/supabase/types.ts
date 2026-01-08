@@ -498,6 +498,7 @@ export type Database = {
     }
     Functions: {
       get_user_full_name: { Args: { _user_id: string }; Returns: string }
+      get_user_last_sign_in: { Args: { _user_id: string }; Returns: string }
       get_user_role: { Args: { _user_id: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
     }
