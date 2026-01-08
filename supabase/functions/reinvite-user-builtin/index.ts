@@ -14,7 +14,8 @@ const ReinviteSchema = z.object({
 });
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
-const FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") ?? "Locator <no-reply@example.com>";
+const FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") ?? "Locator <info@faithandharmonyllc.com>";
+console.log(`FROM_EMAIL configured as: ${FROM_EMAIL}`);
 
 async function reinviteUserHandler(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
