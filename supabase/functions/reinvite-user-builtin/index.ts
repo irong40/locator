@@ -93,7 +93,12 @@ async function reinviteUserHandler(req: Request): Promise<Response> {
       `,
     });
 
-    console.log("Reinvite email sent:", emailResponse);
+    if (emailResponse.error) {
+      console.error("Failed to send reinvite email:", emailResponse.error);
+      return createErrorResponse(emailResponse.error.message, 500);
+    }
+
+    console.log("Reinvite email sent successfully:", emailResponse.data);
 
     return createSuccessResponse({ success: true, userId });
   } catch (error: unknown) {
