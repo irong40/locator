@@ -1,6 +1,8 @@
-import { Building2, Factory, Package, CreditCard, LayoutDashboard, Wrench, MapPin, Settings, Users, History, HelpCircle } from 'lucide-react';
+import { Building2, Factory, Package, CreditCard, LayoutDashboard, Wrench, MapPin, Settings, Users, History, HelpCircle, AlertCircle } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sidebar,
   SidebarContent,
@@ -32,6 +34,21 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { role, isAdmin, isManager } = useUserRole();
+
+  // Fetch open ticket count for admin badge
+  const { data: openTicketCount = 0 } = useQuery({
+    queryKey: ['open-ticket-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('maintenance_tickets')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'open');
+      if (error) return 0;
+      return count ?? 0;
+    },
+    enabled: isAdmin,
+    refetchInterval: 60000, // Refresh every minute
+  });
 
   const canSeeCatalog = isAdmin || isManager;
 
@@ -133,6 +150,21 @@ export function AppSidebar() {
                   >
                     <History className="h-4 w-4" />
                     <span>Audit Logs</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => navigate('/trouble-tickets')}
+                    isActive={location.pathname === '/trouble-tickets'}
+                    className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground"
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Trouble Tickets</span>
+                    {openTicketCount > 0 && (
+                      <Badge variant="destructive" className="ml-auto text-xs px-1.5 py-0.5">
+                        {openTicketCount}
+                      </Badge>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
