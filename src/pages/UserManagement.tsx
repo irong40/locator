@@ -282,35 +282,21 @@ const UserManagement = () => {
     },
   });
 
-  // Resend invite mutation
+  // Password reset mutation (uses Supabase built-in email)
   const resendInviteMutation = useMutation({
-    mutationFn: async ({ userId, email, firstName }: { userId: string; email: string; firstName?: string }) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await fetch(
-        'https://zgutgcwzakyceylzwbry.supabase.co/functions/v1/reinvite-user-builtin',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ userId, email, firstName }),
-        }
-      );
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Failed to resend invite');
-      return result;
+    mutationFn: async ({ email }: { email: string }) => {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://locator.dradamopierce.com/reset-password',
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: 'Invitation Resent', description: 'User will receive a new email to set up their account.' });
+      toast({ title: 'Password Reset Sent', description: 'User will receive an email to set their password.' });
       setDialogAction(null);
       setSelectedUser(null);
     },
     onError: (error) => {
-      toast({ title: 'Resend Failed', description: error.message, variant: 'destructive' });
+      toast({ title: 'Reset Failed', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -408,9 +394,7 @@ const UserManagement = () => {
   const handleResendInvite = () => {
     if (!selectedUser || dialogAction !== 'resend-invite') return;
     resendInviteMutation.mutate({
-      userId: selectedUser.user_id,
       email: selectedUser.email || '',
-      firstName: selectedUser.first_name || undefined,
     });
   };
 
