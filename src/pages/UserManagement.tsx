@@ -48,7 +48,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Mail, Eye, Pencil, Trash2, UserCheck, UserX, RefreshCw } from 'lucide-react';
+import { Loader2, UserPlus, Mail, Eye, Pencil, Trash2, UserCheck, UserX, RefreshCw, Users } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
 import { inviteSchema, profileEditSchema } from '@/lib/schemas/user';
 
@@ -84,6 +84,7 @@ const UserManagement = () => {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: '', firstName: '', lastName: '', roleId: '' });
   const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
+  const [bulkResetDialogOpen, setBulkResetDialogOpen] = useState(false);
 
   // Fetch all users with their roles
   const { data: users, isLoading: usersLoading } = useQuery({
@@ -300,6 +301,63 @@ const UserManagement = () => {
     },
   });
 
+  // Bulk password reset mutation for legacy users
+  const bulkResetMutation = useMutation({
+    mutationFn: async () => {
+      // Get all active users with emails (legacy users who need password reset)
+      const usersToReset = users?.filter(
+        (u) => u.is_active && u.email && u.email.trim() !== ''
+      ) || [];
+
+      if (usersToReset.length === 0) {
+        throw new Error('No active users with emails found');
+      }
+
+      const results = { success: 0, failed: 0, errors: [] as string[] };
+
+      // Process sequentially to avoid rate limiting
+      for (const user of usersToReset) {
+        try {
+          const { error } = await supabase.auth.resetPasswordForEmail(user.email!, {
+            redirectTo: 'https://locator.dradamopierce.com/reset-password',
+          });
+          if (error) {
+            results.failed++;
+            results.errors.push(`${user.email}: ${error.message}`);
+          } else {
+            results.success++;
+          }
+          // Small delay to avoid rate limiting
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        } catch (err) {
+          results.failed++;
+          results.errors.push(`${user.email}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      }
+
+      return results;
+    },
+    onSuccess: (results) => {
+      setBulkResetDialogOpen(false);
+      if (results.failed > 0) {
+        toast({
+          title: 'Bulk Reset Completed with Errors',
+          description: `${results.success} sent, ${results.failed} failed. Check console for details.`,
+          variant: 'destructive',
+        });
+        console.error('Bulk reset errors:', results.errors);
+      } else {
+        toast({
+          title: 'Bulk Reset Complete',
+          description: `Password reset emails sent to ${results.success} users.`,
+        });
+      }
+    },
+    onError: (error) => {
+      toast({ title: 'Bulk Reset Failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const handleInviteSubmit = () => {
     const result = inviteSchema.safeParse(inviteForm);
     if (!result.success) {
@@ -461,97 +519,135 @@ const UserManagement = () => {
         <h1 className="text-2xl font-heading font-semibold text-foreground">
           Users List
         </h1>
-        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Invite User
+        <div className="flex items-center gap-2">
+          {/* Bulk Password Reset Dialog */}
+          <AlertDialog open={bulkResetDialogOpen} onOpenChange={setBulkResetDialogOpen}>
+            <Button
+              variant="outline"
+              onClick={() => setBulkResetDialogOpen(true)}
+              disabled={bulkResetMutation.isPending}
+            >
+              {bulkResetMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Users className="h-4 w-4 mr-2" />
+              )}
+              Bulk Password Reset
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Invite New User</DialogTitle>
-              <DialogDescription>
-                Send an email invitation to add a new user to the system.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    value={inviteForm.firstName}
-                    onChange={(e) => setInviteForm({ ...inviteForm, firstName: e.target.value })}
-                    placeholder="John"
-                  />
-                  {inviteErrors.firstName && (
-                    <p className="text-sm text-destructive">{inviteErrors.firstName}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    value={inviteForm.lastName}
-                    onChange={(e) => setInviteForm({ ...inviteForm, lastName: e.target.value })}
-                    placeholder="Doe"
-                  />
-                  {inviteErrors.lastName && (
-                    <p className="text-sm text-destructive">{inviteErrors.lastName}</p>
-                  )}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={inviteForm.email}
-                  onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
-                  placeholder="john.doe@example.com"
-                />
-                {inviteErrors.email && (
-                  <p className="text-sm text-destructive">{inviteErrors.email}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select
-                  value={inviteForm.roleId}
-                  onValueChange={(value) => setInviteForm({ ...inviteForm, roleId: value })}
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Bulk Password Reset</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will send password reset emails to all {users?.filter((u) => u.is_active && u.email).length || 0} active users.
+                  This is useful for legacy users who need to set their passwords.
+                  <br /><br />
+                  <strong>Are you sure you want to proceed?</strong>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => bulkResetMutation.mutate()}
+                  disabled={bulkResetMutation.isPending}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles?.map((role) => (
-                      <SelectItem key={role.id} value={role.id}>
-                        {role.role_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {inviteErrors.roleId && (
-                  <p className="text-sm text-destructive">{inviteErrors.roleId}</p>
-                )}
+                  {bulkResetMutation.isPending ? 'Sending...' : 'Send Reset Emails'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Invite User
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Invite New User</DialogTitle>
+                <DialogDescription>
+                  Send an email invitation to add a new user to the system.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      value={inviteForm.firstName}
+                      onChange={(e) => setInviteForm({ ...inviteForm, firstName: e.target.value })}
+                      placeholder="John"
+                    />
+                    {inviteErrors.firstName && (
+                      <p className="text-sm text-destructive">{inviteErrors.firstName}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={inviteForm.lastName}
+                      onChange={(e) => setInviteForm({ ...inviteForm, lastName: e.target.value })}
+                      placeholder="Doe"
+                    />
+                    {inviteErrors.lastName && (
+                      <p className="text-sm text-destructive">{inviteErrors.lastName}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={inviteForm.email}
+                    onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                    placeholder="john.doe@example.com"
+                  />
+                  {inviteErrors.email && (
+                    <p className="text-sm text-destructive">{inviteErrors.email}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select
+                    value={inviteForm.roleId}
+                    onValueChange={(value) => setInviteForm({ ...inviteForm, roleId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles?.map((role) => (
+                        <SelectItem key={role.id} value={role.id}>
+                          {role.role_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {inviteErrors.roleId && (
+                    <p className="text-sm text-destructive">{inviteErrors.roleId}</p>
+                  )}
+                </div>
               </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setInviteOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleInviteSubmit} disabled={inviteMutation.isPending}>
-                {inviteMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Mail className="h-4 w-4 mr-2" />
-                )}
-                Send Invitation
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setInviteOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleInviteSubmit} disabled={inviteMutation.isPending}>
+                  {inviteMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Mail className="h-4 w-4 mr-2" />
+                  )}
+                  Send Invitation
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Users Table */}
