@@ -18,7 +18,11 @@ import {
   Factory,
   Pencil,
   Package,
-  ArrowRight
+  ArrowRight,
+  Clock,
+  UserCheck,
+  UserX,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function HelpGuideUser() {
@@ -103,6 +107,37 @@ export default function HelpGuideUser() {
                     <li>Click the "Sign In" button</li>
                     <li>If you forgot your password, click "Forgot Password" to reset it</li>
                   </ol>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="user-status">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" /> Understanding Account Status
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-muted-foreground mb-3">
+                    Your account status is based on login activity:
+                  </p>
+                  <ul className="space-y-3 text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <Badge className="bg-orange-500 text-white"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
+                      <span>You've been invited but haven't logged in yet</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Badge className="bg-green-500 text-white"><UserCheck className="h-3 w-3 mr-1" />Active</Badge>
+                      <span>You've logged in within the last 30 days</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Badge className="bg-yellow-500 text-black"><AlertTriangle className="h-3 w-3 mr-1" />Stale</Badge>
+                      <span>You haven't logged in for 30-60 days</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Badge className="bg-red-500 text-white"><UserX className="h-3 w-3 mr-1" />Inactive</Badge>
+                      <span>You haven't logged in for over 60 days</span>
+                    </li>
+                  </ul>
+                  <p className="text-muted-foreground mt-3 text-sm italic">
+                    Simply log in regularly to keep your account active!
+                  </p>
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="navigation">
