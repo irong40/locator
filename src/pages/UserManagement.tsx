@@ -369,53 +369,95 @@ const UserManagement = () => {
   // Send invite mutation
   const inviteMutation = useMutation({
     mutationFn: async (formData: typeof inviteForm) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      const response = await fetch(
-        'https://zgutgcwzakyceylzwbry.supabase.co/functions/v1/invite-user-builtin',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify(formData),
+      if (!session) {
+        return { ok: false as const, status: 401, error: 'Not authenticated' };
+      }
+
+      try {
+        const response = await fetch(
+          'https://zgutgcwzakyceylzwbry.supabase.co/functions/v1/invite-user-builtin',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify(formData),
+          }
+        );
+
+        const parsed = (await response.json().catch(() => null)) as unknown;
+        const parsedObj = parsed as { error?: unknown; userId?: unknown } | null;
+
+        const errorMessage =
+          typeof parsedObj?.error === 'string'
+            ? parsedObj.error
+            : `Invite failed (HTTP ${response.status})`;
+
+        if (!response.ok) {
+          return { ok: false as const, status: response.status, error: errorMessage };
         }
-      );
 
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Failed to send invite');
-      return result;
+        if (typeof parsedObj?.userId !== 'string' || parsedObj.userId.trim() === '') {
+          return {
+            ok: false as const,
+            status: 500,
+            error: 'Invite succeeded but response was missing userId',
+          };
+        }
+
+        return { ok: true as const, userId: parsedObj.userId };
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Network error';
+        return { ok: false as const, status: 0, error: message };
+      }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (!result.ok) {
+        const message = result.error || 'Failed to send invitation';
+        const isUserExists =
+          message.toLowerCase().includes('already registered') ||
+          message.toLowerCase().includes('already exists');
+        const isEmailFailed =
+          message.toLowerCase().includes('failed to send') &&
+          message.toLowerCase().includes('email');
+
+        if (isUserExists) {
+          toast({
+            title: 'User Already Exists',
+            description:
+              'This email is already registered. Find the user in the list and click "Resend Invite" to send a new invitation link.',
+          });
+        } else if (isEmailFailed) {
+          toast({
+            title: 'Email Delivery Failed',
+            description:
+              'The user was created but the invitation email failed. Use "Resend Invite" to try again.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({ title: 'Invitation Failed', description: message, variant: 'destructive' });
+        }
+
+        return;
+      }
+
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({ title: 'Invitation Sent', description: 'User will receive an email to set up their account.' });
+      toast({
+        title: 'Invitation Sent',
+        description: 'User will receive an email to set up their account.',
+      });
       setInviteOpen(false);
       setInviteForm({ email: '', firstName: '', lastName: '', roleId: '' });
       setInviteErrors({});
     },
     onError: (error) => {
-      const message = error.message || 'Failed to send invitation';
-      const isUserExists = message.toLowerCase().includes('already registered') || 
-                           message.toLowerCase().includes('already exists');
-      const isEmailFailed = message.toLowerCase().includes('failed to send') && 
-                            message.toLowerCase().includes('email');
-      
-      if (isUserExists) {
-        toast({ 
-          title: 'User Already Exists', 
-          description: 'This email is already registered. Find the user in the list and click "Resend Invite" to send a new invitation link.',
-        });
-      } else if (isEmailFailed) {
-        toast({ 
-          title: 'Email Delivery Failed', 
-          description: 'The user was created but the invitation email failed. Use "Resend Invite" to try again.',
-          variant: 'destructive',
-        });
-      } else {
-        toast({ title: 'Invitation Failed', description: message, variant: 'destructive' });
-      }
+      const message = error instanceof Error ? error.message : 'Failed to send invitation';
+      toast({ title: 'Invitation Failed', description: message, variant: 'destructive' });
     },
   });
 
