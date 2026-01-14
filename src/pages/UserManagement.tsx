@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -48,7 +48,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Mail, Eye, Pencil, Trash2, UserCheck, UserX, RefreshCw, Users, Clock, AlertTriangle } from 'lucide-react';
+import { Loader2, UserPlus, Mail, Eye, Pencil, Trash2, UserCheck, UserX, RefreshCw, Users, Clock, AlertTriangle, Undo2 } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
 
 // Login status types and helpers
@@ -245,8 +245,12 @@ const UserManagement = () => {
     },
   });
 
-  // Permanently delete user mutation
-  const deleteUserMutation = useMutation({
+  // Track pending deletions for undo functionality
+  const pendingDeletions = useRef<Map<string, { timeout: NodeJS.Timeout; user: UserWithRole }>>(new Map());
+  const UNDO_TIMEOUT_MS = 8000; // 8 seconds to undo
+
+  // Actual delete mutation (called after undo window expires)
+  const executeDeleteMutation = useMutation({
     mutationFn: async (userId: string) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
@@ -265,21 +269,102 @@ const UserManagement = () => {
 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to delete user');
-      return result;
+      return { userId, result };
     },
-    onSuccess: () => {
+    onSuccess: ({ userId }) => {
+      pendingDeletions.current.delete(userId);
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({ 
-        title: 'User Deleted', 
-        description: 'The user has been permanently deleted from the system.' 
-      });
-      setDialogAction(null);
-      setSelectedUser(null);
     },
-    onError: (error) => {
+    onError: (error, userId) => {
+      // Restore user on failure
+      const pending = pendingDeletions.current.get(userId);
+      if (pending) {
+        const previousUsers = queryClient.getQueryData<UserWithRole[]>(['admin-users']);
+        if (previousUsers) {
+          queryClient.setQueryData<UserWithRole[]>(
+            ['admin-users'],
+            [...previousUsers, pending.user].sort((a, b) => 
+              (a.email || '').localeCompare(b.email || '')
+            )
+          );
+        }
+        pendingDeletions.current.delete(userId);
+      }
       toast({ title: 'Delete Failed', description: error.message, variant: 'destructive' });
     },
   });
+
+  // Undo delete - restore user to list
+  const undoDelete = useCallback((userId: string) => {
+    const pending = pendingDeletions.current.get(userId);
+    if (!pending) return;
+
+    // Clear the timeout to prevent actual deletion
+    clearTimeout(pending.timeout);
+    
+    // Restore user to the list
+    const previousUsers = queryClient.getQueryData<UserWithRole[]>(['admin-users']);
+    if (previousUsers) {
+      queryClient.setQueryData<UserWithRole[]>(
+        ['admin-users'],
+        [...previousUsers, pending.user].sort((a, b) => 
+          (a.email || '').localeCompare(b.email || '')
+        )
+      );
+    }
+    
+    pendingDeletions.current.delete(userId);
+    toast({ 
+      title: 'Delete Cancelled', 
+      description: `${pending.user.first_name || pending.user.email} has been restored.` 
+    });
+  }, [queryClient, toast]);
+
+  // Initiate delete with undo option
+  const initiateDelete = useCallback((user: UserWithRole) => {
+    const userId = user.user_id;
+    
+    // Optimistically remove from list
+    const previousUsers = queryClient.getQueryData<UserWithRole[]>(['admin-users']);
+    if (previousUsers) {
+      queryClient.setQueryData<UserWithRole[]>(
+        ['admin-users'],
+        previousUsers.filter((u) => u.user_id !== userId)
+      );
+    }
+
+    // Set timeout for actual deletion
+    const timeout = setTimeout(() => {
+      executeDeleteMutation.mutate(userId);
+    }, UNDO_TIMEOUT_MS);
+
+    // Store pending deletion info
+    pendingDeletions.current.set(userId, { timeout, user });
+
+    // Close dialog
+    setDialogAction(null);
+    setSelectedUser(null);
+
+    // Show toast with undo button
+    toast({
+      title: 'User Scheduled for Deletion',
+      description: (
+        <div className="flex items-center justify-between gap-4">
+          <span>{user.first_name || user.email} will be deleted in {UNDO_TIMEOUT_MS / 1000}s</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => undoDelete(userId)}
+            className="shrink-0"
+          >
+            <Undo2 className="h-4 w-4 mr-1" />
+            Undo
+          </Button>
+        </div>
+      ),
+      duration: UNDO_TIMEOUT_MS,
+    });
+  }, [queryClient, toast, executeDeleteMutation, undoDelete]);
 
   // Send invite mutation
   const inviteMutation = useMutation({
@@ -433,7 +518,7 @@ const UserManagement = () => {
 
   const handlePermanentDelete = () => {
     if (!selectedUser || dialogAction !== 'delete') return;
-    deleteUserMutation.mutate(selectedUser.user_id);
+    initiateDelete(selectedUser);
   };
 
   const handleEditClick = (user: UserWithRole) => {
@@ -1010,8 +1095,7 @@ const UserManagement = () => {
               onClick={handlePermanentDelete}
               className="bg-destructive hover:bg-destructive/90"
             >
-              {deleteUserMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Delete Permanently
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
