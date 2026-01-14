@@ -311,7 +311,26 @@ const UserManagement = () => {
       setInviteErrors({});
     },
     onError: (error) => {
-      toast({ title: 'Invitation Failed', description: error.message, variant: 'destructive' });
+      const message = error.message || 'Failed to send invitation';
+      const isUserExists = message.toLowerCase().includes('already registered') || 
+                           message.toLowerCase().includes('already exists');
+      const isEmailFailed = message.toLowerCase().includes('failed to send') && 
+                            message.toLowerCase().includes('email');
+      
+      if (isUserExists) {
+        toast({ 
+          title: 'User Already Exists', 
+          description: 'This email is already registered. Find the user in the list and click "Resend Invite" to send a new invitation link.',
+        });
+      } else if (isEmailFailed) {
+        toast({ 
+          title: 'Email Delivery Failed', 
+          description: 'The user was created but the invitation email failed. Use "Resend Invite" to try again.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: 'Invitation Failed', description: message, variant: 'destructive' });
+      }
     },
   });
 
