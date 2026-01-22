@@ -461,16 +461,18 @@ const UserManagement = () => {
     },
   });
 
-  // Password reset mutation (uses Supabase built-in email)
+  // Password reset mutation (uses custom edge function with Resend for proper email formatting)
   const resendInviteMutation = useMutation({
-    mutationFn: async ({ email }: { email: string }) => {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://locator.dradamopierce.com/reset-password',
+    mutationFn: async ({ userId, email }: { userId: string; email: string }) => {
+      const { data, error } = await supabase.functions.invoke('reinvite-user-builtin', {
+        body: { userId, email },
       });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
     },
     onSuccess: () => {
-      toast({ title: 'Password Reset Sent', description: 'User will receive an email to set their password.' });
+      toast({ title: 'Password Reset Sent', description: 'User will receive an email with a link to set their password.' });
       setDialogAction(null);
       setSelectedUser(null);
     },
@@ -630,6 +632,7 @@ const UserManagement = () => {
   const handleResendInvite = () => {
     if (!selectedUser || dialogAction !== 'resend-invite') return;
     resendInviteMutation.mutate({
+      userId: selectedUser.user_id,
       email: selectedUser.email || '',
     });
   };
