@@ -14,8 +14,30 @@ const ReinviteSchema = z.object({
 });
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
-const FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") ?? "Locator <info@faithandharmonyllc.com>";
-console.log(`FROM_EMAIL configured as: ${FROM_EMAIL}`);
+
+const DEFAULT_FROM_EMAIL = "Locator <info@faithandharmonyllc.com>";
+
+function normalizeFromEmail(raw: string | null): string {
+  const value = (raw ?? "").trim();
+  if (!value) return DEFAULT_FROM_EMAIL;
+
+  // Resend requires either:
+  // - email@example.com
+  // - Name <email@example.com>
+  const emailOnly = /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(value);
+  const nameWithEmail = /^.+<\s*[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+\s*>$/.test(value);
+
+  if (emailOnly || nameWithEmail) return value;
+
+  // Do not log the raw value because it may accidentally contain a secret.
+  console.warn(
+    "RESEND_FROM_EMAIL is invalid (expected email@example.com or Name <email@example.com>). Falling back to default.",
+  );
+  return DEFAULT_FROM_EMAIL;
+}
+
+const FROM_EMAIL = normalizeFromEmail(Deno.env.get("RESEND_FROM_EMAIL"));
+console.log(`Using FROM email: ${FROM_EMAIL}`);
 
 async function reinviteUserHandler(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
