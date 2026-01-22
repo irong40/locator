@@ -72,9 +72,15 @@ async function reinviteUserHandler(req: Request): Promise<Response> {
       return createErrorResponse(linkError?.message ?? "Failed to generate recovery link", 400);
     }
 
-    // Supabase returns the action link on the properties object for generateLink
-    // @ts-ignore - Deno Supabase admin client returns properties on data
-    const actionLink = (linkData as any).properties?.action_link ?? (linkData as any).action_link;
+    // Supabase admin generateLink returns { user, properties: { action_link, ... } }
+    // The action_link is the full URL users click to reset their password
+    const actionLink = 
+      linkData?.properties?.action_link ?? 
+      (linkData as any)?.action_link ?? 
+      null;
+
+    console.log("generateLink response keys:", Object.keys(linkData ?? {}));
+    console.log("linkData.properties keys:", Object.keys((linkData as any)?.properties ?? {}));
 
     if (!actionLink) {
       console.error("No action_link returned from generateLink", linkData);
