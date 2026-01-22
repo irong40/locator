@@ -9,7 +9,31 @@ import {
 } from "../_shared/auth-utils.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
-const FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") ?? "Locator <info@faithandharmonyllc.com>";
+
+const DEFAULT_FROM_EMAIL = "Locator <info@faithandharmonyllc.com>";
+
+function normalizeFromEmail(raw: string | null): string {
+  const candidate = (raw ?? "").trim();
+  if (candidate === "") return DEFAULT_FROM_EMAIL;
+
+  // Resend expects either: email@example.com OR Name <email@example.com>
+  const plainEmail = /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/;
+  const namedEmail = /^[^<>\n]+<[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+>$/;
+
+  if (plainEmail.test(candidate) || namedEmail.test(candidate)) return candidate;
+
+  console.warn("RESEND_FROM_EMAIL is invalid; falling back to DEFAULT_FROM_EMAIL.");
+  return DEFAULT_FROM_EMAIL;
+}
+
+function getFromDomain(from: string): string {
+  const match = from.match(/<([^>]+)>/) ?? from.match(/^([^\s<>]+@[^\s<>]+)$/);
+  const email = match?.[1] ?? from;
+  const at = email.lastIndexOf("@");
+  return at >= 0 ? email.slice(at + 1) : "unknown";
+}
+
+const FROM_EMAIL = normalizeFromEmail(Deno.env.get("RESEND_FROM_EMAIL"));
 
 const InviteSchema = z.object({
   email: z.string().email({ message: 'Invalid email address' }).max(255, { message: 'Email must be less than 255 characters' }),
@@ -107,7 +131,7 @@ async function inviteUserHandler(req: Request): Promise<Response> {
     }
 
     // Send invitation email via Resend
-    console.log(`Sending invite email from: ${FROM_EMAIL}`);
+    console.log(`Sending invite email (from domain: ${getFromDomain(FROM_EMAIL)})`);
     const emailResponse = await resend.emails.send({
       from: FROM_EMAIL,
       to: [email],
