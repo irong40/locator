@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.maintenance-log]
 verify_jwt = false
+
+[functions.create-user-builtin]
+verify_jwt = false
