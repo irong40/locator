@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +24,7 @@ type SessionState = 'loading' | 'ready' | 'expired' | 'success';
 const ResetPassword = () => {
   const navigate = useNavigate();
   const { updatePassword, session } = useAuth();
+  const { isAdmin, isManager } = useUserRole();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState('');
@@ -87,7 +89,8 @@ const ResetPassword = () => {
           title: 'Password Updated',
           description: 'Your password has been successfully updated.',
         });
-        setTimeout(() => navigate('/vendors'), 2000);
+        const redirectPath = (isAdmin || isManager) ? '/dashboard' : '/vendors';
+        setTimeout(() => navigate(redirectPath), 2000);
       }
     } finally {
       setLoading(false);
