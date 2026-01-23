@@ -48,7 +48,8 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Mail, Eye, Pencil, Trash2, UserCheck, UserX, RefreshCw, Users, Clock, AlertTriangle, Undo2 } from 'lucide-react';
+import { Loader2, UserPlus, Mail, Eye, Pencil, Trash2, UserCheck, UserX, RefreshCw, Users, Clock, AlertTriangle, Undo2, Copy, Check } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import type { UserRole } from '@/lib/types';
 
 // Login status types and helpers
@@ -90,6 +91,23 @@ type UserWithRole = {
 
 type DialogActionType = 'activate' | 'deactivate' | 'delete' | 'resend-invite' | null;
 
+// Simple copy button with feedback
+const CopyButton = ({ text }: { text: string }) => {
+  const [copied, setCopied] = useState(false);
+  
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  
+  return (
+    <Button variant="outline" size="sm" onClick={handleCopy} className="shrink-0">
+      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+    </Button>
+  );
+};
+
 const UserManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -105,8 +123,9 @@ const UserManagement = () => {
   const [editPhone, setEditPhone] = useState('');
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ email: '', firstName: '', lastName: '', roleId: '' });
+  const [inviteForm, setInviteForm] = useState({ email: '', firstName: '', lastName: '', roleId: '', sendInvite: true, password: '' });
   const [inviteErrors, setInviteErrors] = useState<Record<string, string>>({});
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
   const [bulkResetDialogOpen, setBulkResetDialogOpen] = useState(false);
 
   // Fetch all users with their roles
@@ -368,7 +387,7 @@ const UserManagement = () => {
 
   // Send invite mutation
   const inviteMutation = useMutation({
-    mutationFn: async (formData: typeof inviteForm) => {
+    mutationFn: async (formData: { email: string; firstName: string; lastName: string; roleId: string }) => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -452,12 +471,70 @@ const UserManagement = () => {
         description: 'User will receive an email to set up their account.',
       });
       setInviteOpen(false);
-      setInviteForm({ email: '', firstName: '', lastName: '', roleId: '' });
+      setInviteForm({ email: '', firstName: '', lastName: '', roleId: '', sendInvite: true, password: '' });
       setInviteErrors({});
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : 'Failed to send invitation';
       toast({ title: 'Invitation Failed', description: message, variant: 'destructive' });
+    },
+  });
+
+  // Create user directly (without invitation email)
+  const createUserMutation = useMutation({
+    mutationFn: async (formData: { email: string; firstName: string; lastName: string; roleId: string; password?: string }) => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(
+        'https://zgutgcwzakyceylzwbry.supabase.co/functions/v1/create-user-builtin',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify(formData),
+        }
+      );
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to create user');
+      return result as { success: boolean; userId: string; password?: string; warning?: string };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      
+      if (result.warning) {
+        toast({
+          title: 'User Created with Warning',
+          description: result.warning,
+          variant: 'destructive',
+        });
+      }
+
+      // If password was auto-generated, show credentials
+      if (result.password) {
+        setCreatedCredentials({ email: inviteForm.email, password: result.password });
+      } else {
+        toast({
+          title: 'User Created',
+          description: 'User account has been created successfully.',
+        });
+        setInviteOpen(false);
+      }
+      
+      setInviteForm({ email: '', firstName: '', lastName: '', roleId: '', sendInvite: true, password: '' });
+      setInviteErrors({});
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Failed to create user';
+      toast({ title: 'User Creation Failed', description: message, variant: 'destructive' });
     },
   });
 
@@ -539,7 +616,12 @@ const UserManagement = () => {
   });
 
   const handleInviteSubmit = () => {
-    const result = inviteSchema.safeParse(inviteForm);
+    const result = inviteSchema.safeParse({
+      email: inviteForm.email,
+      firstName: inviteForm.firstName,
+      lastName: inviteForm.lastName,
+      roleId: inviteForm.roleId,
+    });
     if (!result.success) {
       const errors: Record<string, string> = {};
       result.error.errors.forEach((err) => {
@@ -548,8 +630,33 @@ const UserManagement = () => {
       setInviteErrors(errors);
       return;
     }
+
+    // Validate password if creating directly (not sending invite)
+    if (!inviteForm.sendInvite && inviteForm.password && inviteForm.password.length > 0 && inviteForm.password.length < 8) {
+      setInviteErrors({ password: 'Password must be at least 8 characters' });
+      return;
+    }
+
     setInviteErrors({});
-    inviteMutation.mutate(inviteForm);
+
+    if (inviteForm.sendInvite) {
+      // Send invitation email
+      inviteMutation.mutate({
+        email: inviteForm.email,
+        firstName: inviteForm.firstName,
+        lastName: inviteForm.lastName,
+        roleId: inviteForm.roleId,
+      });
+    } else {
+      // Create user directly without email
+      createUserMutation.mutate({
+        email: inviteForm.email,
+        firstName: inviteForm.firstName,
+        lastName: inviteForm.lastName,
+        roleId: inviteForm.roleId,
+        password: inviteForm.password || undefined,
+      });
+    }
   };
 
   const handleToggleActive = () => {
@@ -737,18 +844,26 @@ const UserManagement = () => {
             </AlertDialogContent>
           </AlertDialog>
 
-          <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+          <Dialog open={inviteOpen} onOpenChange={(open) => {
+            setInviteOpen(open);
+            if (!open) {
+              setInviteForm({ email: '', firstName: '', lastName: '', roleId: '', sendInvite: true, password: '' });
+              setInviteErrors({});
+            }
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Invite User
+                Add User
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Invite New User</DialogTitle>
+                <DialogTitle>{inviteForm.sendInvite ? 'Invite New User' : 'Create User Directly'}</DialogTitle>
                 <DialogDescription>
-                  Send an email invitation to add a new user to the system.
+                  {inviteForm.sendInvite 
+                    ? 'Send an email invitation to add a new user to the system.'
+                    : 'Create a user account directly without sending an invitation email.'}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -812,18 +927,60 @@ const UserManagement = () => {
                     <p className="text-sm text-destructive">{inviteErrors.roleId}</p>
                   )}
                 </div>
+
+                {/* Toggle: Send Invite vs Create Directly */}
+                <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/50">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="send-invite" className="font-medium">Send invitation email</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {inviteForm.sendInvite 
+                        ? 'User will receive an email to set their password'
+                        : 'Create account directly - share credentials manually'}
+                    </p>
+                  </div>
+                  <Switch
+                    id="send-invite"
+                    checked={inviteForm.sendInvite}
+                    onCheckedChange={(checked) => setInviteForm({ ...inviteForm, sendInvite: checked, password: '' })}
+                  />
+                </div>
+
+                {/* Password field - only shown when creating directly */}
+                {!inviteForm.sendInvite && (
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password (optional)</Label>
+                    <Input
+                      id="password"
+                      type="text"
+                      value={inviteForm.password}
+                      onChange={(e) => setInviteForm({ ...inviteForm, password: e.target.value })}
+                      placeholder="Leave blank to auto-generate"
+                    />
+                    {inviteErrors.password && (
+                      <p className="text-sm text-destructive">{inviteErrors.password}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      If left blank, a secure password will be generated and shown after creation.
+                    </p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setInviteOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleInviteSubmit} disabled={inviteMutation.isPending}>
-                  {inviteMutation.isPending ? (
+                <Button 
+                  onClick={handleInviteSubmit} 
+                  disabled={inviteMutation.isPending || createUserMutation.isPending}
+                >
+                  {(inviteMutation.isPending || createUserMutation.isPending) ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
+                  ) : inviteForm.sendInvite ? (
                     <Mail className="h-4 w-4 mr-2" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
                   )}
-                  Send Invitation
+                  {inviteForm.sendInvite ? 'Send Invitation' : 'Create User'}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1166,6 +1323,64 @@ const UserManagement = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Created User Credentials Dialog */}
+      <Dialog open={!!createdCredentials} onOpenChange={(open) => !open && setCreatedCredentials(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-green-600" />
+              User Created Successfully
+            </DialogTitle>
+            <DialogDescription>
+              Share these credentials with the user. Make sure to copy them now - the password cannot be retrieved later.
+            </DialogDescription>
+          </DialogHeader>
+          {createdCredentials && (
+            <div className="space-y-4 py-4">
+              <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase">Email</Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-background px-2 py-1 rounded text-sm font-mono">
+                      {createdCredentials.email}
+                    </code>
+                    <CopyButton text={createdCredentials.email} />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase">Password</Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-background px-2 py-1 rounded text-sm font-mono">
+                      {createdCredentials.password}
+                    </code>
+                    <CopyButton text={createdCredentials.password} />
+                  </div>
+                </div>
+              </div>
+              <Button 
+                className="w-full"
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `Email: ${createdCredentials.email}\nPassword: ${createdCredentials.password}`
+                  );
+                }}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Copy All Credentials
+              </Button>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setCreatedCredentials(null);
+              setInviteOpen(false);
+            }}>
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
