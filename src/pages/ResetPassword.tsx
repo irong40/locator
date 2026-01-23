@@ -87,7 +87,7 @@ const ResetPassword = () => {
           title: 'Password Updated',
           description: 'Your password has been successfully updated.',
         });
-        setTimeout(() => navigate('/dashboard'), 2000);
+        setTimeout(() => navigate('/vendors'), 2000);
       }
     } finally {
       setLoading(false);
@@ -202,7 +202,7 @@ const ResetPassword = () => {
     switch (sessionState) {
       case 'loading': return 'Please wait while we verify your reset link...';
       case 'expired': return 'Your password reset link is no longer valid';
-      case 'success': return 'Redirecting you to the dashboard...';
+      case 'success': return 'Redirecting you to your account...';
       case 'ready': return 'Enter your new password below';
     }
   };
