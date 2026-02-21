@@ -33,7 +33,10 @@ import {
   Database,
   Pencil,
   ArrowLeft,
-  Clock
+  Clock,
+  FileText,
+  Download,
+  Upload
 } from 'lucide-react';
 
 export default function HelpGuideAdmin() {
@@ -93,22 +96,23 @@ export default function HelpGuideAdmin() {
                 <li><a href="#getting-started" className="text-primary hover:underline text-sm">1. Getting Started</a></li>
                 <li><a href="#finding-vendors" className="text-primary hover:underline text-sm">2. Finding Vendors</a></li>
                 <li><a href="#managing-vendors" className="text-primary hover:underline text-sm">3. Managing Vendors</a></li>
-                <li><a href="#profile" className="text-primary hover:underline text-sm">4. Your Profile</a></li>
-                <li><a href="#account" className="text-primary hover:underline text-sm">5. Password & Account</a></li>
+                <li><a href="#documents" className="text-primary hover:underline text-sm">4. Document Library</a></li>
+                <li><a href="#profile" className="text-primary hover:underline text-sm">5. Your Profile</a></li>
+                <li><a href="#account" className="text-primary hover:underline text-sm">6. Password & Account</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-2 text-foreground">{isAdmin ? 'Admin' : 'Manager'} Features</h4>
               <ul className="space-y-1">
-                <li><a href="#dashboard" className="text-primary hover:underline text-sm">6. Dashboard</a></li>
+                <li><a href="#dashboard" className="text-primary hover:underline text-sm">7. Dashboard</a></li>
                 {isAdmin && (
-                  <li><a href="#user-management" className="text-primary hover:underline text-sm">7. User Management</a></li>
+                  <li><a href="#user-management" className="text-primary hover:underline text-sm">8. User Management</a></li>
                 )}
-                <li><a href="#catalog-management" className="text-primary hover:underline text-sm">{isAdmin ? '8' : '7'}. Catalog Management</a></li>
+                <li><a href="#catalog-management" className="text-primary hover:underline text-sm">{isAdmin ? '9' : '8'}. Catalog Management</a></li>
                 {isAdmin && (
                   <>
-                    <li><a href="#audit-logs" className="text-primary hover:underline text-sm">9. Audit Logs</a></li>
-                    <li><a href="#data-migration" className="text-primary hover:underline text-sm">10. Data Migration</a></li>
+                    <li><a href="#audit-logs" className="text-primary hover:underline text-sm">10. Audit Logs</a></li>
+                    <li><a href="#data-migration" className="text-primary hover:underline text-sm">11. Data Migration</a></li>
                   </>
                 )}
               </ul>
@@ -154,6 +158,9 @@ export default function HelpGuideAdmin() {
                     </li>
                     <li className="flex items-center gap-2">
                       <Building2 className="h-4 w-4" /> <strong>Vendors</strong> - Manage all vendors
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" /> <strong>Documents</strong> - Team document library
                     </li>
                     <li className="flex items-center gap-2">
                       <Factory className="h-4 w-4" /> <strong>Catalog</strong> - OEM Brands, Engine Brands, Products, Payment Types
@@ -298,13 +305,86 @@ export default function HelpGuideAdmin() {
         </Card>
       </section>
 
+      {/* Document Library */}
+      <section id="documents" className="mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              4. Document Library
+            </CardTitle>
+            <CardDescription>Manage team documents and files</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="browse-docs">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" /> Browsing & Downloading
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                    <li>Go to <strong>Documents</strong> from the sidebar</li>
+                    <li>Search by title or filter by category tabs</li>
+                    <li>Click <strong>Download</strong> on any document card to save it</li>
+                  </ol>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="upload-docs">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Upload className="h-4 w-4" /> Uploading Documents
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                    <li>Click the <strong>Upload Document</strong> button at the top of the page</li>
+                    <li>Enter a title for the document</li>
+                    <li>Optionally add a description</li>
+                    <li>Select a category (Operations Manuals, Training Materials, etc.)</li>
+                    <li>Choose a file to upload (PDF, Word, Excel, PowerPoint, or text — max 10 MB)</li>
+                    <li>Click <strong>Upload</strong> to save</li>
+                  </ol>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="edit-docs">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Pencil className="h-4 w-4" /> Editing Document Details
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                    <li>Click the <strong>Edit</strong> (pencil) icon on the document card</li>
+                    <li>Update the title, description, or category</li>
+                    <li>Click <strong>Save</strong> to apply changes</li>
+                  </ol>
+                  <p className="text-muted-foreground mt-3 text-sm italic">
+                    To replace a file, delete the document and re-upload with the new file.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="delete-docs">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" /> Deleting Documents
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                    <li>Click the <strong>Delete</strong> (trash) icon on the document card</li>
+                    <li>Confirm deletion in the dialog</li>
+                  </ol>
+                  <p className="text-muted-foreground mt-3 text-sm italic">
+                    This permanently removes the document and its file from storage.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* Profile */}
       <section id="profile" className="mb-8">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
-              4. Your Profile
+              5. Your Profile
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -321,7 +401,7 @@ export default function HelpGuideAdmin() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <KeyRound className="h-5 w-5 text-primary" />
-              5. Password & Account
+              6. Password & Account
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -351,7 +431,7 @@ export default function HelpGuideAdmin() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
-              6. Dashboard
+              7. Dashboard
             </CardTitle>
             <CardDescription>System metrics and quick insights</CardDescription>
           </CardHeader>
@@ -390,7 +470,7 @@ export default function HelpGuideAdmin() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
-                7. User Management
+                8. User Management
               </CardTitle>
               <CardDescription>Manage user accounts and access</CardDescription>
             </CardHeader>
@@ -514,7 +594,7 @@ export default function HelpGuideAdmin() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5 text-primary" />
-              {isAdmin ? '8' : '7'}. Catalog Management
+              {isAdmin ? '9' : '8'}. Catalog Management
             </CardTitle>
             <CardDescription>Manage brands, products, and payment types</CardDescription>
           </CardHeader>
@@ -593,7 +673,7 @@ export default function HelpGuideAdmin() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <History className="h-5 w-5 text-primary" />
-                9. Audit Logs
+                10. Audit Logs
               </CardTitle>
               <CardDescription>Track system activity and changes</CardDescription>
             </CardHeader>
@@ -638,7 +718,7 @@ export default function HelpGuideAdmin() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-primary" />
-                10. Data Migration
+                11. Data Migration
               </CardTitle>
               <CardDescription>Import data from legacy systems</CardDescription>
             </CardHeader>

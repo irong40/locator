@@ -22,7 +22,9 @@ import {
   Clock,
   UserCheck,
   UserX,
-  AlertTriangle
+  AlertTriangle,
+  FileText,
+  Download
 } from 'lucide-react';
 
 export default function HelpGuideUser() {
@@ -77,11 +79,12 @@ export default function HelpGuideUser() {
             <li><a href="#getting-started" className="text-primary hover:underline">1. Getting Started</a></li>
             <li><a href="#finding-vendors" className="text-primary hover:underline">2. Finding Vendors</a></li>
             <li><a href="#viewing-vendors" className="text-primary hover:underline">3. Viewing Vendors</a></li>
+            <li><a href="#documents" className="text-primary hover:underline">4. Document Library</a></li>
             {canEdit && (
-              <li><a href="#editing-vendors" className="text-primary hover:underline">4. Editing Vendors</a></li>
+              <li><a href="#editing-vendors" className="text-primary hover:underline">5. Editing Vendors</a></li>
             )}
-            <li><a href="#profile" className="text-primary hover:underline">{canEdit ? '5' : '4'}. Managing Your Profile</a></li>
-            <li><a href="#account" className="text-primary hover:underline">{canEdit ? '6' : '5'}. Password & Account</a></li>
+            <li><a href="#profile" className="text-primary hover:underline">{canEdit ? '6' : '5'}. Managing Your Profile</a></li>
+            <li><a href="#account" className="text-primary hover:underline">{canEdit ? '7' : '6'}. Password & Account</a></li>
           </ul>
         </CardContent>
       </Card>
@@ -152,6 +155,9 @@ export default function HelpGuideUser() {
                     </li>
                     <li className="flex items-center gap-2">
                       <Building2 className="h-4 w-4" /> <strong>Vendors</strong> - Browse all vendors
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" /> <strong>Documents</strong> - Browse the document library
                     </li>
                   </ul>
                 </AccordionContent>
@@ -273,6 +279,51 @@ export default function HelpGuideUser() {
         </Card>
       </section>
 
+      {/* Document Library */}
+      <section id="documents" className="mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              4. Document Library
+            </CardTitle>
+            <CardDescription>Browse and download team documents</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="browse-docs">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" /> Browsing Documents
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                    <li>Go to <strong>Documents</strong> from the sidebar</li>
+                    <li>Browse all available documents in the library</li>
+                    <li>Use the <strong>search bar</strong> to find documents by title</li>
+                    <li>Use the <strong>category tabs</strong> to filter by category (e.g., Operations Manuals, Training Materials)</li>
+                  </ol>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="download-docs">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Download className="h-4 w-4" /> Downloading Documents
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                    <li>Find the document you need</li>
+                    <li>Click the <strong>Download</strong> button on the document card</li>
+                    <li>The file will be downloaded to your computer</li>
+                  </ol>
+                  <p className="text-muted-foreground mt-3 text-sm italic">
+                    Supported file types include PDF, Word, Excel, PowerPoint, and text files.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* Editing Vendors - Only shown for Users who can edit */}
       {canEdit && (
         <section id="editing-vendors" className="mb-8">
@@ -280,7 +331,7 @@ export default function HelpGuideUser() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Pencil className="h-5 w-5 text-primary" />
-                4. Editing Vendors
+                5. Editing Vendors
               </CardTitle>
               <CardDescription>Update vendor information and add brands/products</CardDescription>
             </CardHeader>
@@ -354,7 +405,7 @@ export default function HelpGuideUser() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
-              {canEdit ? '5' : '4'}. Managing Your Profile
+              {canEdit ? '6' : '5'}. Managing Your Profile
             </CardTitle>
             <CardDescription>Update your personal information</CardDescription>
           </CardHeader>
@@ -382,7 +433,7 @@ export default function HelpGuideUser() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <KeyRound className="h-5 w-5 text-primary" />
-              {canEdit ? '6' : '5'}. Password & Account
+              {canEdit ? '7' : '6'}. Password & Account
             </CardTitle>
             <CardDescription>Manage your password and account access</CardDescription>
           </CardHeader>
