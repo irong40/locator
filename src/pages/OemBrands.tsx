@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Search, Pencil, Trash2, Tag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
+import { QueryError } from '@/components/ui/query-error';
 
 export default function OemBrands() {
   const { toast } = useToast();
@@ -22,7 +23,7 @@ export default function OemBrands() {
   const [editingBrand, setEditingBrand] = useState<{ id: string; oem_brand: string } | null>(null);
   const [brandName, setBrandName] = useState('');
 
-  const { data: brands, isLoading } = useQuery({
+  const { data: brands, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['oem-brands'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -123,6 +124,13 @@ export default function OemBrands() {
           </Button>
         )}
       </div>
+
+      {isError && (
+        <QueryError
+          message={error?.message || 'Failed to load OEM brands.'}
+          onRetry={() => refetch()}
+        />
+      )}
 
       <Card>
         <CardHeader>

@@ -10,6 +10,8 @@ export type ProductId = Brand<string, 'ProductId'>;
 export type OemBrandId = Brand<string, 'OemBrandId'>;
 export type EngineBrandId = Brand<string, 'EngineBrandId'>;
 export type PaymentTypeId = Brand<string, 'PaymentTypeId'>;
+export type DocumentId = Brand<string, 'DocumentId'>;
+export type DocumentCategoryId = Brand<string, 'DocumentCategoryId'>;
 export type ZipCode = Brand<string, 'ZipCode'>;
 
 // Domain types based on C&R schema
@@ -78,6 +80,31 @@ export type VendorWithRelations = Vendor & {
   epp_brands?: OemBrand[];
   products?: Product[];
   engine_brands?: (EngineBrand & { is_certified: boolean })[];
+};
+
+export type DocumentCategory = {
+  id: DocumentCategoryId;
+  name: string;
+  sort_order: number;
+  created_at: string;
+};
+
+export type Document = {
+  id: DocumentId;
+  title: string;
+  description: string | null;
+  category_id: DocumentCategoryId;
+  file_path: string;
+  file_name: string;
+  file_size: number;
+  file_type: string;
+  uploaded_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DocumentWithCategory = Document & {
+  document_categories: DocumentCategory;
 };
 
 // User role types

@@ -11,6 +11,7 @@ import { Plus, Search, Building2, Phone, Mail, MapPin, FilterX, Pencil, Check, X
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { QueryError } from '@/components/ui/query-error';
 
 type OemEppFilter = 'all' | 'oem' | 'epp' | 'both' | 'none';
 type ReviewFilter = 'all' | 'needs-review';
@@ -40,7 +41,7 @@ export default function Vendors() {
   // Inline editing state
   const [editing, setEditing] = useState<EditingState | null>(null);
 
-  const { data: vendors, isLoading } = useQuery({
+  const { data: vendors, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['vendors'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -211,6 +212,13 @@ export default function Vendors() {
           Add Vendor
         </Button>
       </div>
+
+      {isError && (
+        <QueryError
+          message={error?.message || 'Failed to load vendors.'}
+          onRetry={() => refetch()}
+        />
+      )}
 
       {needsReviewCount > 0 && (
         <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 flex items-center justify-between">

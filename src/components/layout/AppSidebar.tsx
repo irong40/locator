@@ -1,4 +1,4 @@
-import { Building2, Factory, Package, CreditCard, LayoutDashboard, Wrench, MapPin, Settings, Users, History, HelpCircle, AlertCircle } from 'lucide-react';
+import { Building2, Factory, Package, CreditCard, LayoutDashboard, Wrench, MapPin, Settings, Users, History, HelpCircle, AlertCircle, FileText } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useQuery } from '@tanstack/react-query';
@@ -21,6 +21,7 @@ const mainMenuItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard, managerAndAbove: true },
   { title: 'Find Vendors', url: '/vendor-search', icon: MapPin },
   { title: 'Vendors', url: '/vendors', icon: Building2 },
+  { title: 'Documents', url: '/documents', icon: FileText },
 ];
 
 const catalogMenuItems = [

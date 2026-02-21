@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Search, Pencil, Trash2, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
+import { QueryError } from '@/components/ui/query-error';
 
 export default function Products() {
   const { toast } = useToast();
@@ -22,7 +23,7 @@ export default function Products() {
   const [editingProduct, setEditingProduct] = useState<{ id: string; product: string } | null>(null);
   const [productName, setProductName] = useState('');
 
-  const { data: products, isLoading } = useQuery({
+  const { data: products, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -123,6 +124,13 @@ export default function Products() {
           </Button>
         )}
       </div>
+
+      {isError && (
+        <QueryError
+          message={error?.message || 'Failed to load products.'}
+          onRetry={() => refetch()}
+        />
+      )}
 
       <Card>
         <CardHeader>

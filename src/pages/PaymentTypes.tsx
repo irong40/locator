@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Search, Pencil, Trash2, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
+import { QueryError } from '@/components/ui/query-error';
 
 export default function PaymentTypes() {
   const { toast } = useToast();
@@ -21,7 +22,7 @@ export default function PaymentTypes() {
   const [editingType, setEditingType] = useState<{ id: string; payment_type: string } | null>(null);
   const [typeName, setTypeName] = useState('');
 
-  const { data: paymentTypes, isLoading } = useQuery({
+  const { data: paymentTypes, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['payment-types'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -122,6 +123,13 @@ export default function PaymentTypes() {
           </Button>
         )}
       </div>
+
+      {isError && (
+        <QueryError
+          message={error?.message || 'Failed to load payment types.'}
+          onRetry={() => refetch()}
+        />
+      )}
 
       <Card>
         <CardHeader>

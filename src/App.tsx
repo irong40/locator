@@ -32,9 +32,18 @@ import HelpGuideUser from './pages/HelpGuideUser';
 import HelpGuideAdmin from './pages/HelpGuideAdmin';
 import { HelpRedirect } from './components/help/HelpRedirect';
 import TroubleTickets from './pages/TroubleTickets';
+import Documents from './pages/Documents';
 import NotFound from './pages/NotFound';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 // Configure maintenance agent for Mission Control
 maintenanceAgent.configure({
@@ -132,6 +141,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['Admin', 'Manager', 'User']}>
             <VendorCreate />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/documents"
+        element={
+          <ProtectedRoute>
+            <Documents />
           </ProtectedRoute>
         }
       />

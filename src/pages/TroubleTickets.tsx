@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, Bug, FileText, Clock, CheckCircle, XCircle, Eye, RefreshCw, Search } from 'lucide-react';
 import { format } from 'date-fns';
+import { QueryError } from '@/components/ui/query-error';
 
 type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 type TicketType = 'issue' | 'error' | 'log';
@@ -74,7 +75,7 @@ export default function TroubleTickets() {
   const [searchQuery, setSearchQuery] = useState('');
   const [resolutionNotes, setResolutionNotes] = useState('');
 
-  const { data: tickets = [], isLoading, refetch } = useQuery({
+  const { data: tickets = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['maintenance-tickets', statusFilter, typeFilter],
     queryFn: async () => {
       let query = supabase
@@ -191,6 +192,13 @@ export default function TroubleTickets() {
           </CardContent>
         </Card>
       </div>
+
+      {isError && (
+        <QueryError
+          message={error?.message || 'Failed to load trouble tickets.'}
+          onRetry={() => refetch()}
+        />
+      )}
 
       {/* Filters */}
       <Card>

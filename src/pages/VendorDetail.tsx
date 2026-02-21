@@ -42,6 +42,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { z } from 'zod';
+import { QueryError } from '@/components/ui/query-error';
 
 const vendorSchema = z.object({
   vendor_name: z.string().min(1, 'Vendor name is required').max(200),
@@ -78,7 +79,7 @@ export default function VendorDetail() {
   const [formData, setFormData] = useState<Partial<VendorFormData>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { data: vendor, isLoading: vendorLoading } = useQuery({
+  const { data: vendor, isLoading: vendorLoading, isError, error, refetch } = useQuery({
     queryKey: ['vendor', id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -314,6 +315,15 @@ export default function VendorDetail() {
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-64 w-full" />
       </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <QueryError
+        message={error?.message || 'Failed to load vendor details.'}
+        onRetry={() => refetch()}
+      />
     );
   }
 

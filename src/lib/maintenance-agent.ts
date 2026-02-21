@@ -71,7 +71,7 @@ class MaintenanceAgent {
   private heartbeatInterval: number | null = null;
 
   private constructor() {
-    this.startHeartbeat();
+    // Heartbeat removed — the maintenance-heartbeat edge function doesn't exist
   }
 
   static getInstance(): MaintenanceAgent {
