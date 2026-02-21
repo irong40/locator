@@ -82,3 +82,26 @@ CREATE TRIGGER documents_updated_at
   BEFORE UPDATE ON public.documents
   FOR EACH ROW
   EXECUTE FUNCTION public.update_documents_updated_at();
+
+-- 7. Storage bucket for document files
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('documents', 'documents', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- 8. Storage RLS policies
+CREATE POLICY "Authenticated users can download documents"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'documents' AND auth.role() = 'authenticated');
+
+CREATE POLICY "Admins can upload documents"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'documents' AND public.has_role(auth.uid(), 'Admin'));
+
+CREATE POLICY "Admins can update documents"
+  ON storage.objects FOR UPDATE
+  USING (bucket_id = 'documents' AND public.has_role(auth.uid(), 'Admin'))
+  WITH CHECK (bucket_id = 'documents' AND public.has_role(auth.uid(), 'Admin'));
+
+CREATE POLICY "Admins can delete documents"
+  ON storage.objects FOR DELETE
+  USING (bucket_id = 'documents' AND public.has_role(auth.uid(), 'Admin'));
